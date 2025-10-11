@@ -1,4 +1,4 @@
-name: Manual Build Runtime v0.0.1-alpha.0
+name: Manual Build Runtime v0.0.1-alpha.2
 
 on:
   workflow_dispatch:
@@ -11,7 +11,7 @@ on:
 env:
   DOCKER_REGISTRY: docker.io
   IMAGE_NAME: fullstackagent/fullstack-web-runtime
-  IMAGE_TAG: v0.0.1-alpha.1
+  IMAGE_TAG: v0.0.1-alpha.2
 
 jobs:
   build-and-push:
@@ -43,8 +43,9 @@ jobs:
           push: true
           tags: |
             ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
-            ${{ env.IMAGE_NAME }}:0.0.1-alpha.1
+            ${{ env.IMAGE_NAME }}:0.0.1-alpha.2
             ${{ env.IMAGE_NAME }}:0.0.1
+            ${{ env.IMAGE_NAME }}:latest
           labels: |
             org.opencontainers.image.title=FullStack Web Runtime
             org.opencontainers.image.description=Complete development environment for AI-powered full-stack development
@@ -60,7 +61,8 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Image Tags:**" >> $GITHUB_STEP_SUMMARY
           echo "- \`${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}\`" >> $GITHUB_STEP_SUMMARY
-          echo "- \`${{ env.IMAGE_NAME }}:0.0.1-alpha.1\`" >> $GITHUB_STEP_SUMMARY
+          echo "- \`${{ env.IMAGE_NAME }}:0.0.1-alpha.2\`" >> $GITHUB_STEP_SUMMARY
+          echo "- \`${{ env.IMAGE_NAME }}:latest\`" >> $GITHUB_STEP_SUMMARY
           echo "- \`${{ env.IMAGE_NAME }}:0.0.1\`" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Platform:** linux/amd64" >> $GITHUB_STEP_SUMMARY
