@@ -1,6 +1,7 @@
 import * as k8s from '@kubernetes/client-node';
 import fs from 'fs';
 import path from 'path';
+import { VERSIONS, getRuntimeImage } from './config/versions';
 
 export class KubernetesService {
   private kc: k8s.KubeConfig;
@@ -157,8 +158,8 @@ export class KubernetesService {
       metadata: {
         finalizers: ['cluster.kubeblocks.io/finalizer'],
         labels: {
-          'clusterdefinition.kubeblocks.io/name': 'postgresql',
-          'clusterversion.kubeblocks.io/name': 'postgresql-14.8.0',
+          'clusterdefinition.kubeblocks.io/name': VERSIONS.POSTGRESQL_DEFINITION,
+          'clusterversion.kubeblocks.io/name': VERSIONS.POSTGRESQL_VERSION,
           'sealos-db-provider-cr': clusterName,
           'project.fullstackagent.io/name': k8sProjectName,
         },
@@ -173,8 +174,8 @@ export class KubernetesService {
           tenancy: 'SharedNode',
           topologyKeys: ['kubernetes.io/hostname'],
         },
-        clusterDefinitionRef: 'postgresql',
-        clusterVersionRef: 'postgresql-14.8.0',
+        clusterDefinitionRef: VERSIONS.POSTGRESQL_DEFINITION,
+        clusterVersionRef: VERSIONS.POSTGRESQL_VERSION,
         componentSpecs: [
           {
             componentDefRef: 'postgresql',
@@ -182,16 +183,7 @@ export class KubernetesService {
             name: 'postgresql',
             noCreatePDB: false,
             replicas: 1,
-            resources: {
-              limits: {
-                cpu: '1000m',
-                memory: '1024Mi',
-              },
-              requests: {
-                cpu: '100m',
-                memory: '102Mi',
-              },
-            },
+            resources: VERSIONS.RESOURCES.DATABASE,
             serviceAccountName: clusterName,
             switchPolicy: {
               type: 'Noop',
@@ -203,10 +195,10 @@ export class KubernetesService {
                   accessModes: ['ReadWriteOnce'],
                   resources: {
                     requests: {
-                      storage: '3Gi',
+                      storage: VERSIONS.STORAGE.DATABASE_SIZE,
                     },
                   },
-                  storageClassName: 'openebs-backup',
+                  storageClassName: VERSIONS.STORAGE.STORAGE_CLASS,
                 },
               },
             ],
@@ -351,7 +343,7 @@ export class KubernetesService {
         name: sandboxName,
         namespace,
         annotations: {
-          originImageName: 'fullstackagent/fullstack-web-runtime:latest',
+          originImageName: getRuntimeImage(),
           'deploy.cloud.sealos.io/minReplicas': '1',
           'deploy.cloud.sealos.io/maxReplicas': '1',
           'deploy.cloud.sealos.io/resize': '0Gi',
@@ -390,21 +382,12 @@ export class KubernetesService {
             containers: [
               {
                 name: sandboxName,
-                image: 'fullstackagent/fullstack-web-runtime:latest',
+                image: getRuntimeImage(),
                 env: Object.entries(containerEnv).map(([key, value]) => ({
                   name: key,
                   value: String(value),
                 })),
-                resources: {
-                  requests: {
-                    cpu: '20m',
-                    memory: '25Mi',
-                  },
-                  limits: {
-                    cpu: '200m',
-                    memory: '256Mi',
-                  },
-                },
+                resources: VERSIONS.RESOURCES.SANDBOX,
                 ports: [
                   {
                     containerPort: 3000,
@@ -425,15 +408,7 @@ export class KubernetesService {
                 ],
                 imagePullPolicy: 'Always',
                 volumeMounts: [],
-                // Override the container command to fix ttyd startup
-                command: ['/bin/sh'],
-                args: [
-                  '-c',
-                  `echo "Starting improved ttyd web terminal on port 7681..." &&
-                   echo "Access the web terminal at: http://localhost:7681/" &&
-                   echo "Starting ttyd with correct parameters..." &&
-                   ttyd --port 7681 --interface 0.0.0.0 --check-origin false /bin/bash`
-                ],
+                // Let the container use its default command which should have ttyd configured
               },
             ],
             volumes: [],
@@ -567,11 +542,28 @@ export class KubernetesService {
             'nginx.ingress.kubernetes.io/backend-protocol': 'HTTP',
             'nginx.ingress.kubernetes.io/client-body-buffer-size': '64k',
             'nginx.ingress.kubernetes.io/proxy-buffer-size': '64k',
-            'nginx.ingress.kubernetes.io/proxy-send-timeout': '300',
-            'nginx.ingress.kubernetes.io/proxy-read-timeout': '300',
+            'nginx.ingress.kubernetes.io/proxy-send-timeout': '86400',  // 24 hours for WebSocket
+            'nginx.ingress.kubernetes.io/proxy-read-timeout': '86400',   // 24 hours for WebSocket
             'nginx.ingress.kubernetes.io/server-snippet': `client_header_buffer_size 64k;\nlarge_client_header_buffers 4 128k;`,
-            // WebSocket support for ttyd
-            'nginx.ingress.kubernetes.io/proxy-set-headers': 'Upgrade $http_upgrade\nConnection "upgrade"',
+            // WebSocket support configuration for ttyd - based on terminal_ws.yaml
+            'nginx.ingress.kubernetes.io/configuration-snippet': `
+              set $flag 0;
+              if ($http_upgrade = 'websocket') {set $flag "\${flag}1";}
+              proxy_set_header Upgrade $http_upgrade;
+              proxy_set_header Connection "upgrade";
+              proxy_set_header Host $host;
+              proxy_set_header X-Real-IP $remote_addr;
+              proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+              proxy_set_header X-Forwarded-Proto $scheme;
+              proxy_http_version 1.1;
+              proxy_buffering off;
+              proxy_cache off;
+            `,
+            // CORS configuration for WebSocket
+            'nginx.ingress.kubernetes.io/enable-cors': 'true',
+            'nginx.ingress.kubernetes.io/cors-allow-origin': 'https://usw.sealos.io,https://*.usw.sealos.io,https://dgkwlntjskms.usw.sealos.io',
+            'nginx.ingress.kubernetes.io/cors-allow-methods': 'GET, POST, OPTIONS',
+            'nginx.ingress.kubernetes.io/cors-allow-credentials': 'false',
           },
         },
         spec: {

@@ -1,0 +1,55 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    higress.io/request-header-control-update: |2-
+      Authorization ""
+      X-SEALOS-M2RFB "1"
+    kubernetes.io/ingress.class: nginx
+    nginx.ingress.kubernetes.io/configuration-snippet: |2-
+      set $flag 0;
+      if ($http_upgrade = 'websocket') {set $flag "${flag}1";}
+      if ($http_sec_fetch_site !~ 'same-.*') {set $flag "${flag}2";}
+      if ($flag = '02'){ return 403; }
+      proxy_set_header Authorization "";
+      proxy_set_header X-SEALOS-M2RFB "1";
+    nginx.ingress.kubernetes.io/cors-allow-credentials: "false"
+    nginx.ingress.kubernetes.io/cors-allow-methods: PUT, GET, POST, PATCH, OPTIONS
+    nginx.ingress.kubernetes.io/cors-allow-origin: https://usw.sealos.io,https://*.usw.sealos.io
+    nginx.ingress.kubernetes.io/enable-cors: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: 32m
+    nginx.ingress.kubernetes.io/proxy-buffer-size: 64k
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "86400"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "86400"
+  generation: 1
+  labels:
+    TerminalID: terminal-ajno7yq7
+    app.kubernetes.io/managed-by: sealos
+    app.kubernetes.io/name: terminal-ajno7yq7
+    app.kubernetes.io/part-of: terminal
+  name: terminal-ajno7yq7
+  namespace: ns-ajno7yq7
+  ownerReferences:
+  - apiVersion: terminal.sealos.io/v1
+    blockOwnerDeletion: true
+    controller: true
+    kind: Terminal
+    name: terminal-ajno7yq7
+spec:
+  rules:
+  - host: t6pk7vpcl.usw.sealos.io
+    http:
+      paths:
+      - backend:
+          service:
+            name: terminal-ajno7yq7-svcdgkzz
+            port:
+              number: 8080
+        path: /
+        pathType: Prefix
+  tls:
+  - hosts:
+    - t6pk7vpcl.usw.sealos.io
+    secretName: wildcard-cert
+status:
+  loadBalancer: {}

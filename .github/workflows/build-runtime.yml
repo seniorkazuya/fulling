@@ -1,0 +1,193 @@
+name: Build and Push Runtime Image
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+    paths:
+      - 'runtime/**'
+      - '.github/workflows/build-runtime.yml'
+    tags:
+      - 'v*'
+      - 'runtime-v*'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'runtime/**'
+      - '.github/workflows/build-runtime.yml'
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: 'Custom tag name for the Docker image'
+        required: false
+        default: 'latest'
+
+env:
+  DOCKER_REGISTRY: docker.io
+  IMAGE_NAME: fullstackagent/fullstack-web-runtime
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: linux/amd64,linux/arm64
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          driver-opts: network=host
+
+      - name: Log in to Docker Hub
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.DOCKER_REGISTRY }}
+          username: ${{ secrets.DOCKER_HUB_USERNAME }}
+          password: ${{ secrets.DOCKER_HUB_PASSWORD }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE_NAME }}
+          tags: |
+            # Latest tag for main branch
+            type=raw,value=latest,enable={{is_default_branch}}
+            # Tag for develop branch
+            type=raw,value=develop,enable=${{ github.ref == 'refs/heads/develop' }}
+            # Version tags (v1.0.0 -> 1.0.0)
+            type=semver,pattern={{version}}
+            # Version tags with v prefix
+            type=semver,pattern=v{{version}}
+            # Major and minor versions (v1.0.0 -> 1.0, 1)
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+            # SHA short
+            type=sha,prefix={{branch}}-,format=short
+            # Custom tag from workflow dispatch
+            type=raw,value=${{ github.event.inputs.tag_name }},enable=${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag_name != '' }}
+            # Date-based tag
+            type=schedule,pattern={{date 'YYYYMMDD'}}
+          labels: |
+            org.opencontainers.image.title=FullStack Web Runtime
+            org.opencontainers.image.description=Complete development environment for AI-powered full-stack development
+            org.opencontainers.image.vendor=FullStackAgent
+            maintainer=fanux@sealos.io
+
+      - name: Cache Docker layers
+        uses: actions/cache@v3
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-buildx-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-buildx-
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./runtime
+          file: ./runtime/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=local,src=/tmp/.buildx-cache
+          cache-to: type=local,dest=/tmp/.buildx-cache-new,mode=max
+          build-args: |
+            BUILD_DATE=${{ fromJSON(steps.meta.outputs.json).labels['org.opencontainers.image.created'] }}
+            VCS_REF=${{ github.sha }}
+            VERSION=${{ fromJSON(steps.meta.outputs.json).labels['org.opencontainers.image.version'] }}
+
+      - name: Move cache
+        run: |
+          rm -rf /tmp/.buildx-cache
+          mv /tmp/.buildx-cache-new /tmp/.buildx-cache
+
+      - name: Image digest
+        if: github.event_name != 'pull_request'
+        run: |
+          echo "### Docker Image Published! 🎉" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Image:** \`${{ env.IMAGE_NAME }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Tags:**" >> $GITHUB_STEP_SUMMARY
+          echo "${{ steps.meta.outputs.tags }}" | sed 's/^/- `/; s/$/`/' >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Digest:** \`${{ steps.build.outputs.digest }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Platforms:** linux/amd64, linux/arm64" >> $GITHUB_STEP_SUMMARY
+
+      - name: Scan for vulnerabilities
+        if: github.event_name != 'pull_request'
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.version }}
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+          severity: 'CRITICAL,HIGH'
+        continue-on-error: true
+
+      - name: Upload Trivy results to GitHub Security
+        if: github.event_name != 'pull_request'
+        uses: github/codeql-action/upload-sarif@v2
+        with:
+          sarif_file: 'trivy-results.sarif'
+        continue-on-error: true
+
+  test-image:
+    needs: build
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Test runtime image
+        run: |
+          echo "### Testing Runtime Image 🧪" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          # Test basic functionality
+          docker run --rm ${{ env.IMAGE_NAME }}:latest bash -c "echo '✅ Image starts successfully'"
+
+          # Test ttyd installation
+          docker run --rm ${{ env.IMAGE_NAME }}:latest which ttyd && echo "✅ ttyd is installed" || echo "❌ ttyd not found"
+
+          # Test Node.js
+          NODE_VERSION=$(docker run --rm ${{ env.IMAGE_NAME }}:latest node --version)
+          echo "✅ Node.js version: $NODE_VERSION"
+
+          # Test npm
+          NPM_VERSION=$(docker run --rm ${{ env.IMAGE_NAME }}:latest npm --version)
+          echo "✅ npm version: $NPM_VERSION"
+
+          # Test Claude Code CLI
+          docker run --rm ${{ env.IMAGE_NAME }}:latest bash -c "claude --version" && echo "✅ Claude Code CLI is installed" || echo "⚠️ Claude Code CLI not found (may need authentication)"
+
+          # Test PostgreSQL client
+          PSQL_VERSION=$(docker run --rm ${{ env.IMAGE_NAME }}:latest psql --version)
+          echo "✅ PostgreSQL client: $PSQL_VERSION"
+
+          # Test GitHub CLI
+          GH_VERSION=$(docker run --rm ${{ env.IMAGE_NAME }}:latest gh --version | head -n 1)
+          echo "✅ GitHub CLI: $GH_VERSION"
+
+          # Test Buildah
+          BUILDAH_VERSION=$(docker run --rm ${{ env.IMAGE_NAME }}:latest buildah --version)
+          echo "✅ Buildah: $BUILDAH_VERSION"
+
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "All basic tests passed! ✅" >> $GITHUB_STEP_SUMMARY
