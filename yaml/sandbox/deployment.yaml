@@ -1,0 +1,51 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: FullstackSandbox
+  annotations:
+    originImageName: fullstackagent/fullstack-web-runtime:latest
+    deploy.cloud.sealos.io/minReplicas: '1'
+    deploy.cloud.sealos.io/maxReplicas: '1'
+    deploy.cloud.sealos.io/resize: 0Gi
+  labels:
+    cloud.sealos.io/app-deploy-manager: FullstackSandbox
+    app: FullstackSandbox
+spec:
+  replicas: 1
+  revisionHistoryLimit: 1
+  selector:
+    matchLabels:
+      app: FullstackSandbox
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  template:
+    metadata:
+      labels:
+        app: FullstackSandbox
+        restartTime: '20251011113341'
+    spec:
+      automountServiceAccountToken: false
+      containers:
+        - name: FullstackSandbox
+          image: fullstackagent/fullstack-web-runtime:latest
+          env: []
+          resources:
+            requests:
+              cpu: 20m
+              memory: 25Mi
+            limits:
+              cpu: 200m
+              memory: 256Mi
+          ports:
+            - containerPort: 3000
+              name: bnxxvusqruwc
+            - containerPort: 5000
+              name: hffzmqlmkwdx
+            - containerPort: 8080
+              name: hnkrdxqqlbuq
+          imagePullPolicy: Always
+          volumeMounts: []
+      volumes: []
