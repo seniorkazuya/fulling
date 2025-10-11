@@ -549,6 +549,7 @@ export class KubernetesService {
             'nginx.ingress.kubernetes.io/proxy-buffer-size': '64k',
             'nginx.ingress.kubernetes.io/proxy-read-timeout': '86400',
             'nginx.ingress.kubernetes.io/proxy-send-timeout': '86400',
+            // Note: Not setting backend-protocol, let nginx auto-detect WebSocket via Upgrade header
           },
         },
         spec: {
