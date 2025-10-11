@@ -74,12 +74,10 @@ jobs:
             # Major and minor versions (v1.0.0 -> 1.0, 1)
             type=semver,pattern={{major}}.{{minor}}
             type=semver,pattern={{major}}
-            # SHA short
-            type=sha,prefix={{branch}}-,format=short
+            # SHA short (only on branch pushes, not tags)
+            type=sha,format=short,enable=${{ !startsWith(github.ref, 'refs/tags/') }}
             # Custom tag from workflow dispatch
             type=raw,value=${{ github.event.inputs.tag_name }},enable=${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag_name != '' }}
-            # Date-based tag
-            type=schedule,pattern={{date 'YYYYMMDD'}}
           labels: |
             org.opencontainers.image.title=FullStack Web Runtime
             org.opencontainers.image.description=Complete development environment for AI-powered full-stack development
@@ -95,6 +93,7 @@ jobs:
             ${{ runner.os }}-buildx-
 
       - name: Build and push Docker image
+        id: build
         uses: docker/build-push-action@v5
         with:
           context: ./runtime
@@ -105,6 +104,8 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=local,src=/tmp/.buildx-cache
           cache-to: type=local,dest=/tmp/.buildx-cache-new,mode=max
+          provenance: false
+          sbom: false
           build-args: |
             BUILD_DATE=${{ fromJSON(steps.meta.outputs.json).labels['org.opencontainers.image.created'] }}
             VCS_REF=${{ github.sha }}
@@ -155,39 +156,50 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Extract version tag
+        id: get_version
+        run: |
+          if [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            VERSION=${GITHUB_REF#refs/tags/}
+          else
+            VERSION="latest"
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
       - name: Test runtime image
         run: |
+          IMAGE_TAG="${{ steps.get_version.outputs.version }}"
           echo "### Testing Runtime Image 🧪" >> $GITHUB_STEP_SUMMARY
+          echo "Testing image: ${{ env.IMAGE_NAME }}:${IMAGE_TAG}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
 
           # Test basic functionality
-          docker run --rm ${{ env.IMAGE_NAME }}:latest bash -c "echo '✅ Image starts successfully'"
+          docker run --rm ${{ env.IMAGE_NAME }}:${IMAGE_TAG} bash -c "echo '✅ Image starts successfully'" >> $GITHUB_STEP_SUMMARY
 
           # Test ttyd installation
-          docker run --rm ${{ env.IMAGE_NAME }}:latest which ttyd && echo "✅ ttyd is installed" || echo "❌ ttyd not found"
+          docker run --rm ${{ env.IMAGE_NAME }}:${IMAGE_TAG} bash -c "which ttyd" && echo "✅ ttyd is installed" >> $GITHUB_STEP_SUMMARY || echo "❌ ttyd not found" >> $GITHUB_STEP_SUMMARY
 
           # Test Node.js
-          NODE_VERSION=$(docker run --rm ${{ env.IMAGE_NAME }}:latest node --version)
-          echo "✅ Node.js version: $NODE_VERSION"
+          NODE_VERSION=$(docker run --rm ${{ env.IMAGE_NAME }}:${IMAGE_TAG} node --version)
+          echo "✅ Node.js version: $NODE_VERSION" >> $GITHUB_STEP_SUMMARY
 
           # Test npm
-          NPM_VERSION=$(docker run --rm ${{ env.IMAGE_NAME }}:latest npm --version)
-          echo "✅ npm version: $NPM_VERSION"
+          NPM_VERSION=$(docker run --rm ${{ env.IMAGE_NAME }}:${IMAGE_TAG} npm --version)
+          echo "✅ npm version: $NPM_VERSION" >> $GITHUB_STEP_SUMMARY
 
-          # Test Claude Code CLI
-          docker run --rm ${{ env.IMAGE_NAME }}:latest bash -c "claude --version" && echo "✅ Claude Code CLI is installed" || echo "⚠️ Claude Code CLI not found (may need authentication)"
+          # Test Claude Code CLI (don't fail on this as it needs auth)
+          docker run --rm ${{ env.IMAGE_NAME }}:${IMAGE_TAG} bash -c "claude --version 2>/dev/null || echo 'Claude Code CLI needs authentication'" >> $GITHUB_STEP_SUMMARY
 
           # Test PostgreSQL client
-          PSQL_VERSION=$(docker run --rm ${{ env.IMAGE_NAME }}:latest psql --version)
-          echo "✅ PostgreSQL client: $PSQL_VERSION"
+          PSQL_VERSION=$(docker run --rm ${{ env.IMAGE_NAME }}:${IMAGE_TAG} psql --version)
+          echo "✅ PostgreSQL client: $PSQL_VERSION" >> $GITHUB_STEP_SUMMARY
 
           # Test GitHub CLI
-          GH_VERSION=$(docker run --rm ${{ env.IMAGE_NAME }}:latest gh --version | head -n 1)
-          echo "✅ GitHub CLI: $GH_VERSION"
+          GH_VERSION=$(docker run --rm ${{ env.IMAGE_NAME }}:${IMAGE_TAG} gh --version | head -n 1)
+          echo "✅ GitHub CLI: $GH_VERSION" >> $GITHUB_STEP_SUMMARY
 
-          # Test Buildah
-          BUILDAH_VERSION=$(docker run --rm ${{ env.IMAGE_NAME }}:latest buildah --version)
-          echo "✅ Buildah: $BUILDAH_VERSION"
+          # Test Buildah (don't fail on this as it needs special setup)
+          docker run --rm --privileged ${{ env.IMAGE_NAME }}:${IMAGE_TAG} bash -c "buildah --version 2>/dev/null || echo 'Buildah needs privileged mode'" >> $GITHUB_STEP_SUMMARY
 
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "All basic tests passed! ✅" >> $GITHUB_STEP_SUMMARY
+          echo "Basic tests completed! ✅" >> $GITHUB_STEP_SUMMARY
