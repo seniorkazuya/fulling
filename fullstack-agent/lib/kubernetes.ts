@@ -328,9 +328,11 @@ export class KubernetesService {
       TTYD_PORT: '7681',
       TTYD_INTERFACE: '0.0.0.0',
       TTYD_BASE_PATH: '/',
+      TTYD_WS_PATH: '/ws',  // Important: WebSocket path
       TTYD_MAX_CLIENTS: '0',
       TTYD_READONLY: 'false',
       TTYD_CHECK_ORIGIN: 'false', // Allow all origins for web terminal access
+      TTYD_ALLOW_ORIGIN: '*',  // Allow all origins
     };
 
     // 1. Create Deployment with Sealos-compliant configuration

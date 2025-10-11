@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Entrypoint script for Full-Stack Web Runtime
-# This script starts ttyd as a daemon for web terminal access
+# This script starts ttyd in foreground as the main container process
 
 # Configuration with proper defaults for Kubernetes deployment
 TTYD_PORT=${TTYD_PORT:-7681}
@@ -26,7 +26,8 @@ TTYD_CMD="$TTYD_CMD --port $TTYD_PORT"
 TTYD_CMD="$TTYD_CMD --base-path $TTYD_BASE_PATH"
 
 # Add WebSocket path (important for proper routing)
-TTYD_CMD="$TTYD_CMD --ws-path $TTYD_WS_PATH"
+# Note: Some versions of ttyd don't support --ws-path
+# TTYD_CMD="$TTYD_CMD --ws-path $TTYD_WS_PATH"
 
 # Add authentication if username and password are provided
 if [ -n "$TTYD_USERNAME" ] && [ -n "$TTYD_PASSWORD" ]; then
@@ -43,14 +44,9 @@ if [ "$TTYD_READONLY" = "true" ]; then
     TTYD_CMD="$TTYD_CMD --readonly"
 fi
 
-# FIXED: Correct logic for check-origin flag
-# When TTYD_CHECK_ORIGIN is "false", we DISABLE origin checking
-if [ "$TTYD_CHECK_ORIGIN" = "false" ]; then
-    TTYD_CMD="$TTYD_CMD --check-origin false"
-else
-    # When TTYD_CHECK_ORIGIN is "true" or not set, enable origin checking
-    TTYD_CMD="$TTYD_CMD --check-origin true"
-fi
+# Simplified: Just disable origin checking for compatibility
+# Most ttyd versions don't support --check-origin with value
+# Just don't add the flag to disable origin checking
 
 # Add allow origin (for CORS)
 TTYD_CMD="$TTYD_CMD --allow-origin $TTYD_ALLOW_ORIGIN"
@@ -89,11 +85,10 @@ start_ttyd() {
     # Log the actual command being executed
     echo "Executing: $TTYD_CMD /bin/bash"
 
-    # Start ttyd in background
-    $TTYD_CMD /bin/bash &
-    TTYD_PID=$!
-    echo "✅ ttyd started successfully with PID: $TTYD_PID"
+    # Start ttyd in foreground for Kubernetes (container's main process)
+    echo "Starting ttyd as main process (foreground)..."
     echo "========================================="
+    exec $TTYD_CMD /bin/bash
 }
 
 # Function to stop ttyd gracefully
@@ -121,38 +116,10 @@ trap stop_ttyd EXIT SIGTERM SIGINT
 # Check if ttyd should be disabled
 if [ "$DISABLE_TTYD" = "true" ]; then
     echo "ℹ️  ttyd is disabled via DISABLE_TTYD environment variable"
-else
-    # Start ttyd daemon
-    start_ttyd
-
-    # Wait a moment and check if ttyd started successfully
-    sleep 2
-    if check_ttyd; then
-        echo "✅ ttyd is running and ready to accept connections"
-    else
-        echo "❌ Error: ttyd failed to start. Check the logs above for details."
-        exit 1
-    fi
-fi
-
-# If a command was provided, execute it
-if [ $# -gt 0 ]; then
-    echo "Executing user command: $@"
-    exec "$@"
-else
-    # If no command provided, start an interactive bash shell
-    echo "Starting interactive bash shell..."
-    echo "========================================="
-
-    # Keep the container running and restart ttyd if it crashes
-    while true; do
-        if [ "$DISABLE_TTYD" != "true" ] && ! check_ttyd; then
-            echo "⚠️  ttyd has stopped unexpectedly. Restarting..."
-            start_ttyd
-        fi
-        sleep 10
-    done &
-
-    # Start interactive shell
+    # If ttyd is disabled, just run bash to keep container alive
     exec /bin/bash
+else
+    # Start ttyd in foreground (this will be the main process)
+    start_ttyd
+    # Note: start_ttyd now uses exec, so code below won't be reached
 fi
