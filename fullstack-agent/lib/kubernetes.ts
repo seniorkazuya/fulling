@@ -538,33 +538,35 @@ export class KubernetesService {
             'project.fullstackagent.io/name': k8sProjectName,
           },
           annotations: {
+            // Standard Ingress annotations
             'kubernetes.io/ingress.class': 'nginx',
+
+            // Proxy settings for WebSocket - critical for ttyd
             'nginx.ingress.kubernetes.io/proxy-body-size': '32m',
-            'nginx.ingress.kubernetes.io/ssl-redirect': 'false',
-            'nginx.ingress.kubernetes.io/backend-protocol': 'HTTP',
-            'nginx.ingress.kubernetes.io/client-body-buffer-size': '64k',
             'nginx.ingress.kubernetes.io/proxy-buffer-size': '64k',
+            'nginx.ingress.kubernetes.io/proxy-read-timeout': '86400',  // 24 hours for WebSocket
             'nginx.ingress.kubernetes.io/proxy-send-timeout': '86400',  // 24 hours for WebSocket
-            'nginx.ingress.kubernetes.io/proxy-read-timeout': '86400',   // 24 hours for WebSocket
-            'nginx.ingress.kubernetes.io/server-snippet': `client_header_buffer_size 64k;\nlarge_client_header_buffers 4 128k;`,
-            // WebSocket support configuration for ttyd - based on terminal_ws.yaml
+
+            // Request header control from terminal_ws.yaml
+            'higress.io/request-header-control-update': `
+              Authorization ""
+              X-SEALOS-M2RFB "1"
+            `,
+
+            // WebSocket configuration snippet - critical for ttyd WebSocket support
             'nginx.ingress.kubernetes.io/configuration-snippet': `
               set $flag 0;
               if ($http_upgrade = 'websocket') {set $flag "\${flag}1";}
-              proxy_set_header Upgrade $http_upgrade;
-              proxy_set_header Connection "upgrade";
-              proxy_set_header Host $host;
-              proxy_set_header X-Real-IP $remote_addr;
-              proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-              proxy_set_header X-Forwarded-Proto $scheme;
-              proxy_http_version 1.1;
-              proxy_buffering off;
-              proxy_cache off;
+              if ($http_sec_fetch_site !~ 'same-.*') {set $flag "\${flag}2";}
+              if ($flag = '02'){ return 403; }
+              proxy_set_header Authorization "";
+              proxy_set_header X-SEALOS-M2RFB "1";
             `,
+
             // CORS configuration for WebSocket
             'nginx.ingress.kubernetes.io/enable-cors': 'true',
-            'nginx.ingress.kubernetes.io/cors-allow-origin': 'https://usw.sealos.io,https://*.usw.sealos.io,https://dgkwlntjskms.usw.sealos.io',
-            'nginx.ingress.kubernetes.io/cors-allow-methods': 'GET, POST, OPTIONS',
+            'nginx.ingress.kubernetes.io/cors-allow-origin': 'https://usw.sealos.io,https://*.usw.sealos.io',
+            'nginx.ingress.kubernetes.io/cors-allow-methods': 'PUT, GET, POST, PATCH, OPTIONS',
             'nginx.ingress.kubernetes.io/cors-allow-credentials': 'false',
           },
         },
