@@ -6,7 +6,7 @@
 export const VERSIONS = {
   // Runtime container image version
   // Update this when deploying new runtime versions
-  RUNTIME_IMAGE: 'fullstackagent/fullstack-web-runtime:v0.0.1-alpha.3',
+  RUNTIME_IMAGE: 'fullstackagent/fullstack-web-runtime:v0.0.1-alpha.4',
 
   // PostgreSQL version for KubeBlocks
   POSTGRESQL_VERSION: 'postgresql-14.8.0',

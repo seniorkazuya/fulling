@@ -1,4 +1,4 @@
-name: Manual Build Runtime v0.0.1-alpha.3
+name: Manual Build Runtime v0.0.1-alpha.4
 
 on:
   workflow_dispatch:
@@ -11,7 +11,7 @@ on:
 env:
   DOCKER_REGISTRY: docker.io
   IMAGE_NAME: fullstackagent/fullstack-web-runtime
-  IMAGE_TAG: v0.0.1-alpha.3
+  IMAGE_TAG: v0.0.1-alpha.4
 
 jobs:
   build-and-push:
@@ -43,7 +43,7 @@ jobs:
           push: true
           tags: |
             ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
-            ${{ env.IMAGE_NAME }}:0.0.1-alpha.3
+            ${{ env.IMAGE_NAME }}:0.0.1-alpha.4
             ${{ env.IMAGE_NAME }}:0.0.1
             ${{ env.IMAGE_NAME }}:latest
           labels: |
@@ -61,7 +61,7 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Image Tags:**" >> $GITHUB_STEP_SUMMARY
           echo "- \`${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}\`" >> $GITHUB_STEP_SUMMARY
-          echo "- \`${{ env.IMAGE_NAME }}:0.0.1-alpha.3\`" >> $GITHUB_STEP_SUMMARY
+          echo "- \`${{ env.IMAGE_NAME }}:0.0.1-alpha.4\`" >> $GITHUB_STEP_SUMMARY
           echo "- \`${{ env.IMAGE_NAME }}:latest\`" >> $GITHUB_STEP_SUMMARY
           echo "- \`${{ env.IMAGE_NAME }}:0.0.1\`" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
