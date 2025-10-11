@@ -83,12 +83,41 @@ start_ttyd() {
     echo "========================================="
 
     # Log the actual command being executed
-    echo "Executing: $TTYD_CMD /bin/bash"
+    echo "Executing: ttyd with configured options"
 
     # Start ttyd in foreground for Kubernetes (container's main process)
     echo "Starting ttyd as main process (foreground)..."
     echo "========================================="
-    exec $TTYD_CMD /bin/bash
+
+    # Build the command as an array to properly handle arguments
+    TTYD_ARGS=()
+    TTYD_ARGS+=("--interface" "$TTYD_INTERFACE")
+    TTYD_ARGS+=("--port" "$TTYD_PORT")
+    TTYD_ARGS+=("--base-path" "$TTYD_BASE_PATH")
+
+    # Add authentication if configured
+    if [ -n "$TTYD_USERNAME" ] && [ -n "$TTYD_PASSWORD" ]; then
+        TTYD_ARGS+=("--credential" "$TTYD_USERNAME:$TTYD_PASSWORD")
+    fi
+
+    # Add max clients if configured
+    if [ "$TTYD_MAX_CLIENTS" -gt 0 ]; then
+        TTYD_ARGS+=("--max-clients" "$TTYD_MAX_CLIENTS")
+    fi
+
+    # Add readonly mode if enabled
+    if [ "$TTYD_READONLY" = "true" ]; then
+        TTYD_ARGS+=("--readonly")
+    fi
+
+    # Add allow-origin for CORS
+    TTYD_ARGS+=("--allow-origin" "$TTYD_ALLOW_ORIGIN")
+
+    # Add ping interval
+    TTYD_ARGS+=("--ping-interval" "30")
+
+    # Execute ttyd directly with proper arguments
+    exec ttyd "${TTYD_ARGS[@]}" /bin/bash
 }
 
 # Function to stop ttyd gracefully
