@@ -324,15 +324,11 @@ export class KubernetesService {
       ...envVars,
       DATABASE_URL: dbConnectionString || claudeEnvVars.DATABASE,
       NODE_ENV: 'development',
-      // ttyd configuration - fixed for ttyd 1.7.7 compatibility
+      // ttyd configuration - simplified, no special parameters
       TTYD_PORT: '7681',
       TTYD_INTERFACE: '0.0.0.0',
-      TTYD_BASE_PATH: '/',
-      TTYD_WS_PATH: '/ws',  // Important: WebSocket path
-      TTYD_MAX_CLIENTS: '0',
-      TTYD_READONLY: 'false',
-      TTYD_CHECK_ORIGIN: 'false', // Allow all origins for web terminal access
-      TTYD_ALLOW_ORIGIN: '*',  // Allow all origins
+      // No TTYD_BASE_PATH, no TTYD_WS_PATH - let ttyd use defaults
+      // These were causing issues with WebSocket connections
     };
 
     // 1. Create Deployment with Sealos-compliant configuration
@@ -538,18 +534,15 @@ export class KubernetesService {
             'project.fullstackagent.io/name': k8sProjectName,
           },
           annotations: {
-            'higress.io/request-header-control-update': '  Authorization ""\n  X-SEALOS-M2RFB "1"',
             'kubernetes.io/ingress.class': 'nginx',
-            'nginx.ingress.kubernetes.io/configuration-snippet': '  set $flag 0;\n  if ($http_upgrade = \'websocket\') {set $flag "${flag}1";}\n  if ($http_sec_fetch_site !~ \'same-.*\') {set $flag "${flag}2";}\n  if ($flag = \'02\'){ return 403; }\n  proxy_set_header Authorization "";\n  proxy_set_header X-SEALOS-M2RFB "1";',
-            'nginx.ingress.kubernetes.io/cors-allow-credentials': 'false',
-            'nginx.ingress.kubernetes.io/cors-allow-methods': 'PUT, GET, POST, PATCH, OPTIONS',
-            'nginx.ingress.kubernetes.io/cors-allow-origin': 'https://usw.sealos.io,https://*.usw.sealos.io',
-            'nginx.ingress.kubernetes.io/enable-cors': 'true',
             'nginx.ingress.kubernetes.io/proxy-body-size': '32m',
+            'nginx.ingress.kubernetes.io/ssl-redirect': 'false',
+            'nginx.ingress.kubernetes.io/backend-protocol': 'HTTP',
+            'nginx.ingress.kubernetes.io/client-body-buffer-size': '64k',
             'nginx.ingress.kubernetes.io/proxy-buffer-size': '64k',
-            'nginx.ingress.kubernetes.io/proxy-read-timeout': '86400',
-            'nginx.ingress.kubernetes.io/proxy-send-timeout': '86400',
-            // Note: Not setting backend-protocol, let nginx auto-detect WebSocket via Upgrade header
+            'nginx.ingress.kubernetes.io/proxy-send-timeout': '300',
+            'nginx.ingress.kubernetes.io/proxy-read-timeout': '300',
+            'nginx.ingress.kubernetes.io/server-snippet': 'client_header_buffer_size 64k;\nlarge_client_header_buffers 4 128k;',
           },
         },
         spec: {

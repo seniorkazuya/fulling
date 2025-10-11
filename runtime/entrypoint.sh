@@ -89,34 +89,20 @@ start_ttyd() {
     echo "Starting ttyd as main process (foreground)..."
     echo "========================================="
 
-    # Build the command as an array to properly handle arguments
+    # Simple ttyd startup - minimal parameters for maximum compatibility
+    # Based on user's successful test with no parameters
     TTYD_ARGS=()
+
+    # Only add essential parameters
     TTYD_ARGS+=("--interface" "$TTYD_INTERFACE")
     TTYD_ARGS+=("--port" "$TTYD_PORT")
-    TTYD_ARGS+=("--base-path" "$TTYD_BASE_PATH")
 
-    # Add authentication if configured
+    # Add authentication only if configured
     if [ -n "$TTYD_USERNAME" ] && [ -n "$TTYD_PASSWORD" ]; then
         TTYD_ARGS+=("--credential" "$TTYD_USERNAME:$TTYD_PASSWORD")
     fi
 
-    # Add max clients if configured
-    if [ "$TTYD_MAX_CLIENTS" -gt 0 ]; then
-        TTYD_ARGS+=("--max-clients" "$TTYD_MAX_CLIENTS")
-    fi
-
-    # Add readonly mode if enabled
-    if [ "$TTYD_READONLY" = "true" ]; then
-        TTYD_ARGS+=("--readonly")
-    fi
-
-    # Add allow-origin for CORS
-    TTYD_ARGS+=("--allow-origin" "$TTYD_ALLOW_ORIGIN")
-
-    # Add ping interval
-    TTYD_ARGS+=("--ping-interval" "30")
-
-    # Execute ttyd directly with proper arguments
+    # Execute ttyd with minimal parameters
     exec ttyd "${TTYD_ARGS[@]}" /bin/bash
 }
 
