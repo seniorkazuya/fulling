@@ -5,18 +5,13 @@ import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Trash2, Plus, Save, Key, CreditCard, Shield } from "lucide-react";
+import { Trash2, Plus, Save, Key } from "lucide-react";
 
 interface EnvVariable {
   id?: string;
   key: string;
   value: string;
-  category: string;
-  isSecret: boolean;
 }
 
 export default function EnvironmentPage() {
@@ -28,24 +23,6 @@ export default function EnvironmentPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
-  // Authentication config templates
-  const [googleAuth, setGoogleAuth] = useState({
-    clientId: "",
-    clientSecret: "",
-  });
-
-  const [githubAuth, setGithubAuth] = useState({
-    clientId: "",
-    clientSecret: "",
-  });
-
-  // Payment config
-  const [stripeConfig, setStripeConfig] = useState({
-    publishableKey: "",
-    secretKey: "",
-    webhookSecret: "",
-  });
-
   useEffect(() => {
     fetchEnvironmentVariables();
   }, [projectId]);
@@ -55,25 +32,9 @@ export default function EnvironmentPage() {
       const response = await fetch(`/api/projects/${projectId}/environment`);
       const data = await response.json();
 
-      setEnvVars(data.general || []);
-
-      // Parse auth configs
-      const authVars = data.auth || [];
-      authVars.forEach((env: EnvVariable) => {
-        if (env.key === "GOOGLE_CLIENT_ID") setGoogleAuth(prev => ({ ...prev, clientId: env.value }));
-        if (env.key === "GOOGLE_CLIENT_SECRET") setGoogleAuth(prev => ({ ...prev, clientSecret: env.value }));
-        if (env.key === "GITHUB_CLIENT_ID") setGithubAuth(prev => ({ ...prev, clientId: env.value }));
-        if (env.key === "GITHUB_CLIENT_SECRET") setGithubAuth(prev => ({ ...prev, clientSecret: env.value }));
-      });
-
-      // Parse payment configs
-      const paymentVars = data.payment || [];
-      paymentVars.forEach((env: EnvVariable) => {
-        if (env.key === "STRIPE_PUBLISHABLE_KEY") setStripeConfig(prev => ({ ...prev, publishableKey: env.value }));
-        if (env.key === "STRIPE_SECRET_KEY") setStripeConfig(prev => ({ ...prev, secretKey: env.value }));
-        if (env.key === "STRIPE_WEBHOOK_SECRET") setStripeConfig(prev => ({ ...prev, webhookSecret: env.value }));
-      });
-
+      // Load all general environment variables
+      const generalVars = data.general || [];
+      setEnvVars(generalVars);
       setLoading(false);
     } catch (error) {
       console.error("Error fetching environment variables:", error);
@@ -83,7 +44,7 @@ export default function EnvironmentPage() {
   };
 
   const addEnvVar = () => {
-    setEnvVars([...envVars, { key: "", value: "", category: "general", isSecret: false }]);
+    setEnvVars([...envVars, { key: "", value: "" }]);
   };
 
   const removeEnvVar = (index: number) => {
@@ -99,26 +60,8 @@ export default function EnvironmentPage() {
   const saveEnvironment = async () => {
     setSaving(true);
 
-    // Prepare all environment variables
-    const allVars: EnvVariable[] = [
-      ...envVars,
-      // Google Auth
-      ...(googleAuth.clientId ? [
-        { key: "GOOGLE_CLIENT_ID", value: googleAuth.clientId, category: "auth", isSecret: false },
-        { key: "GOOGLE_CLIENT_SECRET", value: googleAuth.clientSecret, category: "auth", isSecret: true },
-      ] : []),
-      // GitHub Auth
-      ...(githubAuth.clientId ? [
-        { key: "GITHUB_CLIENT_ID", value: githubAuth.clientId, category: "auth", isSecret: false },
-        { key: "GITHUB_CLIENT_SECRET", value: githubAuth.clientSecret, category: "auth", isSecret: true },
-      ] : []),
-      // Stripe
-      ...(stripeConfig.publishableKey ? [
-        { key: "STRIPE_PUBLISHABLE_KEY", value: stripeConfig.publishableKey, category: "payment", isSecret: false },
-        { key: "STRIPE_SECRET_KEY", value: stripeConfig.secretKey, category: "payment", isSecret: true },
-        { key: "STRIPE_WEBHOOK_SECRET", value: stripeConfig.webhookSecret, category: "payment", isSecret: true },
-      ] : []),
-    ];
+    // Only save general environment variables
+    const allVars: EnvVariable[] = envVars.filter(env => env.key && env.value);
 
     try {
       const response = await fetch(`/api/projects/${projectId}/environment`, {
@@ -155,178 +98,60 @@ export default function EnvironmentPage() {
     <div className="min-h-screen bg-black text-white">
       <div className="container mx-auto py-8 px-4">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">Environment Configuration</h1>
-          <p className="text-gray-400">Configure environment variables for your application</p>
+          <h1 className="text-3xl font-bold mb-2">Environment Variables</h1>
+          <p className="text-gray-400">Configure custom environment variables for your application</p>
         </div>
 
-        <Tabs defaultValue="general" className="w-full">
-          <TabsList className="bg-gray-900 border-gray-800">
-            <TabsTrigger value="general" className="data-[state=active]:bg-gray-800">
-              <Key className="mr-2 h-4 w-4" />
-              General
-            </TabsTrigger>
-            <TabsTrigger value="auth" className="data-[state=active]:bg-gray-800">
-              <Shield className="mr-2 h-4 w-4" />
-              Authentication
-            </TabsTrigger>
-            <TabsTrigger value="payment" className="data-[state=active]:bg-gray-800">
-              <CreditCard className="mr-2 h-4 w-4" />
-              Payment
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="general" className="mt-4">
-            <Card className="bg-gray-900 border-gray-800">
-              <CardHeader>
-                <CardTitle className="text-white">General Environment Variables</CardTitle>
-                <CardDescription className="text-gray-400">
-                  Add custom environment variables for your application
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {envVars.map((env, index) => (
-                  <div key={index} className="flex gap-2">
-                    <Input
-                      placeholder="KEY"
-                      value={env.key}
-                      onChange={(e) => updateEnvVar(index, "key", e.target.value.toUpperCase())}
-                      className="bg-gray-800 border-gray-700 text-white"
-                    />
-                    <Input
-                      placeholder="Value"
-                      type={env.isSecret ? "password" : "text"}
-                      value={env.value}
-                      onChange={(e) => updateEnvVar(index, "value", e.target.value)}
-                      className="bg-gray-800 border-gray-700 text-white"
-                    />
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      onClick={() => removeEnvVar(index)}
-                      className="border-gray-700 text-white hover:bg-gray-800"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                ))}
+        <Card className="bg-gray-900 border-gray-800">
+          <CardHeader>
+            <CardTitle className="text-white flex items-center gap-2">
+              <Key className="h-5 w-5" />
+              Custom Environment Variables
+            </CardTitle>
+            <CardDescription className="text-gray-400">
+              Add your application-specific environment variables. For authentication and payment configurations, use their dedicated pages.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {envVars.map((env, index) => (
+              <div key={index} className="grid grid-cols-12 gap-2">
+                <Input
+                  placeholder="KEY"
+                  value={env.key}
+                  onChange={(e) => updateEnvVar(index, "key", e.target.value.toUpperCase().replace(/[^A-Z0-9_]/g, '_'))}
+                  className="bg-gray-800 border-gray-700 text-white font-mono col-span-4"
+                />
+                <Input
+                  placeholder="Value"
+                  value={env.value}
+                  onChange={(e) => updateEnvVar(index, "value", e.target.value)}
+                  className="bg-gray-800 border-gray-700 text-white col-span-7"
+                />
                 <Button
-                  onClick={addEnvVar}
                   variant="outline"
-                  className="border-gray-700 text-white hover:bg-gray-800"
+                  size="icon"
+                  onClick={() => removeEnvVar(index)}
+                  className="border-gray-700 text-white hover:bg-gray-800 col-span-1"
                 >
-                  <Plus className="mr-2 h-4 w-4" />
-                  Add Variable
+                  <Trash2 className="h-4 w-4" />
                 </Button>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="auth" className="mt-4">
-            <div className="space-y-4">
-              <Card className="bg-gray-900 border-gray-800">
-                <CardHeader>
-                  <CardTitle className="text-white">Google Authentication</CardTitle>
-                  <CardDescription className="text-gray-400">
-                    Configure Google OAuth for your application
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div>
-                    <Label className="text-white">Client ID</Label>
-                    <Input
-                      placeholder="your-google-client-id.apps.googleusercontent.com"
-                      value={googleAuth.clientId}
-                      onChange={(e) => setGoogleAuth({ ...googleAuth, clientId: e.target.value })}
-                      className="bg-gray-800 border-gray-700 text-white"
-                    />
-                  </div>
-                  <div>
-                    <Label className="text-white">Client Secret</Label>
-                    <Input
-                      type="password"
-                      placeholder="Your Google Client Secret"
-                      value={googleAuth.clientSecret}
-                      onChange={(e) => setGoogleAuth({ ...googleAuth, clientSecret: e.target.value })}
-                      className="bg-gray-800 border-gray-700 text-white"
-                    />
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="bg-gray-900 border-gray-800">
-                <CardHeader>
-                  <CardTitle className="text-white">GitHub Authentication</CardTitle>
-                  <CardDescription className="text-gray-400">
-                    Configure GitHub OAuth for your application
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div>
-                    <Label className="text-white">Client ID</Label>
-                    <Input
-                      placeholder="Your GitHub OAuth App Client ID"
-                      value={githubAuth.clientId}
-                      onChange={(e) => setGithubAuth({ ...githubAuth, clientId: e.target.value })}
-                      className="bg-gray-800 border-gray-700 text-white"
-                    />
-                  </div>
-                  <div>
-                    <Label className="text-white">Client Secret</Label>
-                    <Input
-                      type="password"
-                      placeholder="Your GitHub OAuth App Client Secret"
-                      value={githubAuth.clientSecret}
-                      onChange={(e) => setGithubAuth({ ...githubAuth, clientSecret: e.target.value })}
-                      className="bg-gray-800 border-gray-700 text-white"
-                    />
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="payment" className="mt-4">
-            <Card className="bg-gray-900 border-gray-800">
-              <CardHeader>
-                <CardTitle className="text-white">Stripe Configuration</CardTitle>
-                <CardDescription className="text-gray-400">
-                  Configure Stripe payment integration
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <Label className="text-white">Publishable Key</Label>
-                  <Input
-                    placeholder="pk_test_..."
-                    value={stripeConfig.publishableKey}
-                    onChange={(e) => setStripeConfig({ ...stripeConfig, publishableKey: e.target.value })}
-                    className="bg-gray-800 border-gray-700 text-white"
-                  />
-                </div>
-                <div>
-                  <Label className="text-white">Secret Key</Label>
-                  <Input
-                    type="password"
-                    placeholder="sk_test_..."
-                    value={stripeConfig.secretKey}
-                    onChange={(e) => setStripeConfig({ ...stripeConfig, secretKey: e.target.value })}
-                    className="bg-gray-800 border-gray-700 text-white"
-                  />
-                </div>
-                <div>
-                  <Label className="text-white">Webhook Secret</Label>
-                  <Input
-                    type="password"
-                    placeholder="whsec_..."
-                    value={stripeConfig.webhookSecret}
-                    onChange={(e) => setStripeConfig({ ...stripeConfig, webhookSecret: e.target.value })}
-                    className="bg-gray-800 border-gray-700 text-white"
-                  />
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+              </div>
+            ))}
+            {envVars.length === 0 && (
+              <div className="text-center py-8 text-gray-500">
+                No custom environment variables configured yet
+              </div>
+            )}
+            <Button
+              onClick={addEnvVar}
+              variant="outline"
+              className="border-gray-700 text-white hover:bg-gray-800"
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              Add Variable
+            </Button>
+          </CardContent>
+        </Card>
 
         <div className="mt-8 flex gap-4">
           <Button

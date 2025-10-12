@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Loader2, Play, Square, RefreshCw, ExternalLink } from "lucide-react";
+import { Loader2, Play, RefreshCw } from "lucide-react";
 import SandboxProgress from "@/components/sandbox-progress";
 
 interface TerminalComponentProps {
@@ -90,31 +90,6 @@ export default function TerminalComponent({ projectId, sandboxUrl }: TerminalCom
     }
   };
 
-  // Stop sandbox
-  const stopSandbox = async () => {
-    setLoading(true);
-    setError(null);
-
-    try {
-      const response = await fetch(`/api/sandbox/${projectId}`, {
-        method: "DELETE",
-      });
-
-      if (response.ok) {
-        setSandboxStatus("stopped");
-        setTtydUrl(null);
-        setShowProgress(false);
-      } else {
-        const data = await response.json();
-        setError(data.error || "Failed to stop sandbox");
-      }
-    } catch (err) {
-      console.error("Error stopping sandbox:", err);
-      setError("Failed to stop sandbox container");
-    } finally {
-      setLoading(false);
-    }
-  };
 
   // Progress component callbacks
   const handleProgressComplete = (ttydUrl: string) => {
@@ -222,35 +197,10 @@ export default function TerminalComponent({ projectId, sandboxUrl }: TerminalCom
   // If sandbox is running, show terminal iframe
   return (
     <div className="h-full w-full bg-black rounded-lg flex flex-col">
-      <div className="bg-gray-900 border-b border-gray-800 p-2 flex items-center justify-between">
+      <div className="bg-gray-900 border-b border-gray-800 p-2 flex items-center">
         <div className="flex items-center gap-2">
           <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse" />
           <span className="text-sm text-gray-400">Sandbox Pod Running</span>
-        </div>
-        <div className="flex gap-2">
-          <Button
-            onClick={() => window.open(ttydUrl!, "_blank")}
-            size="sm"
-            variant="outline"
-            className="border-gray-700 text-white hover:bg-gray-800 text-xs"
-          >
-            <ExternalLink className="mr-1 h-3 w-3" />
-            Open in New Tab
-          </Button>
-          <Button
-            onClick={stopSandbox}
-            disabled={loading}
-            size="sm"
-            variant="outline"
-            className="border-gray-700 text-white hover:bg-gray-800 text-xs"
-          >
-            {loading ? (
-              <Loader2 className="mr-1 h-3 w-3 animate-spin" />
-            ) : (
-              <Square className="mr-1 h-3 w-3" />
-            )}
-            Stop
-          </Button>
         </div>
       </div>
 

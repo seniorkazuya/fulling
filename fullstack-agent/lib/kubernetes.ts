@@ -230,7 +230,7 @@ export class KubernetesService {
         const secret = await this.k8sApi.readNamespacedSecret({ name: secretName, namespace });
 
         // Fix: Handle both response.body.data and response.data patterns
-        const secretData = secret.body?.data || (secret as any).data;
+        const secretData = (secret as any).body?.data || (secret as any).data;
         if (!secretData) {
           throw new Error(`Secret ${secretName} has no data`);
         }
@@ -751,6 +751,107 @@ export class KubernetesService {
     return false;
   }
 
+  async updateDeploymentEnvVars(projectName: string, namespace: string, envVars: Record<string, string>) {
+    namespace = namespace || this.getDefaultNamespace();
+
+    // Convert project name to k8s-compatible format
+    const k8sProjectName = projectName.toLowerCase().replace(/[^a-z0-9-]/g, '').substring(0, 20);
+
+    try {
+      // Find the deployment for this project
+      const deployments = await this.k8sAppsApi.listNamespacedDeployment({ namespace });
+      const deploymentItems = (deployments as any).body?.items || (deployments as any).items || [];
+      const projectDeployment = deploymentItems.find((dep: any) =>
+        dep.metadata.name.startsWith(`${k8sProjectName}-agentruntime-`)
+      );
+
+      if (!projectDeployment) {
+        throw new Error(`No deployment found for project ${projectName}`);
+      }
+
+      const deploymentName = projectDeployment.metadata.name;
+
+      // Load Claude Code environment variables from .secret/.env
+      const claudeEnvPath = path.join(process.cwd(), '.secret', '.env');
+      let claudeEnvVars: Record<string, string> = {};
+
+      if (fs.existsSync(claudeEnvPath)) {
+        const envContent = fs.readFileSync(claudeEnvPath, 'utf-8');
+        envContent.split('\n').forEach(line => {
+          if (line.startsWith('#') || !line.includes('=')) return;
+
+          let cleanLine = line.replace(/^export\s+/, '');
+          const [key, ...valueParts] = cleanLine.split('=');
+          const value = valueParts.join('=');
+
+          if (key && value) {
+            claudeEnvVars[key.trim()] = value.trim().replace(/^["']|["']$/g, '');
+          }
+        });
+      }
+
+      // Get database connection string if available
+      let dbConnectionString = '';
+      try {
+        const dbInfo = await this.getDatabaseSecret(k8sProjectName, namespace);
+        dbConnectionString = `postgresql://${dbInfo.username}:${dbInfo.password}@${dbInfo.host}:${dbInfo.port}/${dbInfo.database}?schema=public`;
+      } catch (error) {
+        console.log('Could not get database info for environment update');
+      }
+
+      // Merge all environment variables
+      const allEnvVars = {
+        ...claudeEnvVars,
+        ...envVars,
+        DATABASE_URL: dbConnectionString || claudeEnvVars.DATABASE_URL,
+        NODE_ENV: 'development',
+        TTYD_PORT: '7681',
+        TTYD_INTERFACE: '0.0.0.0',
+      };
+
+      // Update the deployment with new environment variables
+      const updatedDeployment = {
+        ...projectDeployment,
+        spec: {
+          ...projectDeployment.spec,
+          template: {
+            ...projectDeployment.spec.template,
+            spec: {
+              ...projectDeployment.spec.template.spec,
+              containers: projectDeployment.spec.template.spec.containers.map((container: any) => {
+                if (container.name === deploymentName) {
+                  return {
+                    ...container,
+                    env: Object.entries(allEnvVars).map(([key, value]) => ({
+                      name: key,
+                      value: String(value),
+                    })),
+                  };
+                }
+                return container;
+              }),
+            },
+          },
+        },
+      };
+
+      // Apply the update
+      await this.k8sAppsApi.replaceNamespacedDeployment({
+        name: deploymentName,
+        namespace,
+        body: updatedDeployment,
+      });
+
+      console.log(`✅ Updated deployment ${deploymentName} with new environment variables`);
+
+      // The deployment will automatically restart the pods with new environment variables
+      return true;
+    } catch (error) {
+      console.error(`Failed to update deployment environment variables:`, error);
+      throw error;
+    }
+  }
+
   async getDatabaseSecret(projectName: string, namespace?: string) {
     namespace = namespace || this.getDefaultNamespace();
 
@@ -846,15 +947,6 @@ export class KubernetesService {
     } catch (error) {
       throw new Error(`Failed to get database secret: ${error}`);
     }
-  }
-
-  private generatePassword(length: number = 16): string {
-    const charset = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-    let password = '';
-    for (let i = 0; i < length; i++) {
-      password += charset.charAt(Math.floor(Math.random() * charset.length));
-    }
-    return password;
   }
 
   // Generate random string for port names and domains (12 characters, lowercase letters)

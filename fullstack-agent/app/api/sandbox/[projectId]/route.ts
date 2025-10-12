@@ -170,13 +170,40 @@ export async function POST(
           },
         });
 
-        console.log(`✅ Database created and project updated with connection string`);
+        // Also save DATABASE_URL as an environment variable for easy access
+        const existingDbUrlVar = await prisma.environment.findFirst({
+          where: {
+            projectId: projectId,
+            key: "DATABASE_URL",
+          },
+        });
+
+        if (existingDbUrlVar) {
+          await prisma.environment.update({
+            where: { id: existingDbUrlVar.id },
+            data: {
+              value: databaseUrl,
+            },
+          });
+        } else {
+          await prisma.environment.create({
+            data: {
+              projectId: projectId,
+              key: "DATABASE_URL",
+              value: databaseUrl,
+              category: "database",
+              isSecret: true,
+            },
+          });
+        }
+
+        console.log(`✅ Database created and environment variables updated`);
       }
 
       // Create sandbox deployment with database credentials
       const sandboxInfo = await k8sService.createSandbox(project.name, allEnvVars, k8sNamespace, databaseCredentials);
 
-      // Update or create sandbox record
+      // Update or create sandbox record with database credentials
       if (sandbox) {
         sandbox = await prisma.sandbox.update({
           where: { id: sandbox.id },
@@ -186,6 +213,12 @@ export async function POST(
             k8sServiceName: sandboxInfo.serviceName,
             publicUrl: sandboxInfo.publicUrl,
             ttydUrl: sandboxInfo.ttydUrl,
+            // Save database connection info
+            dbHost: databaseCredentials?.host || null,
+            dbPort: databaseCredentials?.port || null,
+            dbName: databaseCredentials?.database || null,
+            dbUser: databaseCredentials?.username || null,
+            dbPassword: databaseCredentials?.password || null,
             status: "CREATING",
           },
         });
@@ -198,6 +231,12 @@ export async function POST(
             k8sServiceName: sandboxInfo.serviceName,
             publicUrl: sandboxInfo.publicUrl,
             ttydUrl: sandboxInfo.ttydUrl,
+            // Save database connection info
+            dbHost: databaseCredentials?.host || null,
+            dbPort: databaseCredentials?.port || null,
+            dbName: databaseCredentials?.database || null,
+            dbUser: databaseCredentials?.username || null,
+            dbPassword: databaseCredentials?.password || null,
             status: "CREATING",
           },
         });
