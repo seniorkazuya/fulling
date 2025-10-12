@@ -152,8 +152,5 @@ RUN chmod +x /usr/local/bin/entrypoint.sh
 # Expose common ports for web development
 EXPOSE 3000 3001 5000 5173 8080 8000 5432 7681
 
-# Set entrypoint to run ttyd as daemon
-ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
-
-# Set default command
-CMD ["/bin/bash"]
+# Use CMD to run entrypoint.sh directly
+CMD ["/usr/local/bin/entrypoint.sh"]
