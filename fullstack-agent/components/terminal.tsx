@@ -9,6 +9,7 @@ import SandboxProgress from "@/components/sandbox-progress";
 interface TerminalComponentProps {
   projectId: string;
   sandboxUrl?: string;
+  terminalId?: string;
 }
 
 export default function TerminalComponent({ projectId, sandboxUrl }: TerminalComponentProps) {

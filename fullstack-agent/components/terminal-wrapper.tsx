@@ -14,8 +14,9 @@ const Terminal = dynamic(() => import("./terminal"), {
 interface TerminalWrapperProps {
   projectId: string;
   sandboxUrl?: string;
+  terminalId?: string;
 }
 
-export default function TerminalWrapper({ projectId, sandboxUrl }: TerminalWrapperProps) {
-  return <Terminal projectId={projectId} sandboxUrl={sandboxUrl} />;
+export default function TerminalWrapper({ projectId, sandboxUrl, terminalId }: TerminalWrapperProps) {
+  return <Terminal projectId={projectId} sandboxUrl={sandboxUrl} terminalId={terminalId} />;
 }

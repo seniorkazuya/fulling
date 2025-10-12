@@ -99,7 +99,7 @@ Key models defined in `/prisma/schema.prisma`:
 - **Kubeconfig Location**: `.secret/kubeconfig` (MUST use this existing configuration)
 - **Namespace**: Uses `ns-ajno7yq7` (from kubeconfig, no create namespace permissions)
 - **Cluster**: Pre-configured cluster - use existing connection from kubeconfig
-- **Sandbox Image**: `fullstackagent/fullstack-web-runtime:latest`
+- **Sandbox Image**: `fullstackagent/fullstack-web-runtime:v0.0.1-alpha.6` (latest stable)
 - **Exposed Ports**:
   - 3000 (Next.js app)
   - 7681 (ttyd web terminal)
@@ -300,6 +300,50 @@ For ttyd to work properly:
 2. Separate Ingress with WebSocket support
 3. Annotations: `nginx.ingress.kubernetes.io/proxy-set-headers` for WebSocket
 4. Port 7681 exposure with random port name
+
+#### ttyd Startup Fix (2025-10-12)
+
+**Problem**: ttyd terminal was not accessible in browser
+**Solution**: Use official ttyd startup command format
+
+**Correct Configuration**:
+- `entrypoint.sh`: Simple `ttyd -W bash` command (official format)
+- `Dockerfile`: Use `CMD ["/usr/local/bin/entrypoint.sh"]` instead of ENTRYPOINT
+- Never use complex command combinations or exec patterns
+
+## Docker Image Build and Deployment
+
+### ⚠️ CRITICAL: Build Process
+
+**NEVER build images locally!** The development environment does not have Docker installed.
+
+**Use GitHub Actions for all image builds:**
+
+1. **Workflow File**: `.github/workflows/build-runtime-manual.yml`
+2. **Trigger Methods**:
+   - Manual: Use GitHub Actions UI (workflow_dispatch)
+   - Auto: Push to main branch (updates to workflow file)
+   - CLI: `gh workflow run build-runtime-manual.yml`
+
+3. **Version Management**:
+   - Current stable: `v0.0.1-alpha.6`
+   - Update version in workflow file before build
+   - Tags created: `latest`, `0.0.1`, `v0.0.1-alpha.X`
+
+4. **Build Steps**:
+   ```bash
+   # 1. Update version in workflow file
+   # 2. Commit and push changes
+   git add .github/workflows/build-runtime-manual.yml runtime/
+   git commit -m "fix: Update runtime to vX.X.X"
+   git push
+
+   # 3. Build automatically triggers via GitHub Actions
+   # 4. Wait for build completion (check GitHub Actions tab)
+   # 5. Update Kubernetes deployments to use new image
+   ```
+
+5. **Docker Hub Repository**: `fullstackagent/fullstack-web-runtime`
 
 ## Common Tasks
 

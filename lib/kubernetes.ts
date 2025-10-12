@@ -1,6 +1,7 @@
 import * as k8s from '@kubernetes/client-node';
 import fs from 'fs';
 import path from 'path';
+import { getRuntimeImage } from './versions';
 
 export class KubernetesService {
   private kc: k8s.KubeConfig;
@@ -280,7 +281,7 @@ export class KubernetesService {
         name: sandboxName,
         namespace: ns,
         annotations: {
-          'originImageName': 'fullstackagent/fullstack-web-runtime:latest',
+          'originImageName': getRuntimeImage(),
         },
       },
       spec: {
@@ -300,7 +301,7 @@ export class KubernetesService {
             containers: [
               {
                 name: 'sandbox',
-                image: 'fullstackagent/fullstack-web-runtime:latest',
+                image: getRuntimeImage(),
                 imagePullPolicy: 'Always',
                 ports: [
                   {

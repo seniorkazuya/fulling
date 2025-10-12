@@ -4,8 +4,8 @@ import { prisma } from "@/lib/db";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Plus, Folder, ExternalLink } from "lucide-react";
+import { Plus, Folder, ExternalLink, Circle, Clock, GitBranch } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 export default async function ProjectsPage() {
   const session = await auth();
@@ -29,15 +29,15 @@ export default async function ProjectsPage() {
   }) : [];
 
   return (
-    <div className="min-h-screen bg-black text-white">
-      <div className="container mx-auto py-8 px-4">
-        <div className="flex justify-between items-center mb-8">
+    <div className="min-h-screen bg-[#1e1e1e] text-white">
+      <div className="container mx-auto py-6 px-4">
+        <div className="flex justify-between items-center mb-6">
           <div>
-            <h1 className="text-3xl font-bold mb-2">Your Projects</h1>
-            <p className="text-gray-400">Manage and deploy your AI-powered applications</p>
+            <h1 className="text-2xl font-semibold">Projects</h1>
+            <p className="text-sm text-gray-400 mt-1">Manage your AI-powered applications</p>
           </div>
           <Link href="/projects/new">
-            <Button className="bg-white text-black hover:bg-gray-200">
+            <Button className="bg-[#0e639c] hover:bg-[#1177bb] text-white">
               <Plus className="mr-2 h-4 w-4" />
               New Project
             </Button>
@@ -45,13 +45,13 @@ export default async function ProjectsPage() {
         </div>
 
         {projects.length === 0 ? (
-          <Card className="bg-gray-900 border-gray-800">
-            <CardContent className="flex flex-col items-center justify-center py-16">
-              <Folder className="h-16 w-16 text-gray-600 mb-4" />
-              <h2 className="text-xl font-semibold text-white mb-2">No projects yet</h2>
-              <p className="text-gray-400 mb-6">Create your first AI-powered application</p>
+          <Card className="bg-[#252526] border-[#3e3e42]">
+            <CardContent className="flex flex-col items-center justify-center py-12">
+              <Folder className="h-12 w-12 text-gray-500 mb-3" />
+              <h2 className="text-lg font-medium text-white mb-1">No projects yet</h2>
+              <p className="text-sm text-gray-400 mb-5">Create your first AI-powered application</p>
               <Link href="/projects/new">
-                <Button className="bg-white text-black hover:bg-gray-200">
+                <Button className="bg-[#0e639c] hover:bg-[#1177bb] text-white">
                   <Plus className="mr-2 h-4 w-4" />
                   Create Project
                 </Button>
@@ -59,40 +59,59 @@ export default async function ProjectsPage() {
             </CardContent>
           </Card>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {projects.map((project) => (
-              <Card key={project.id} className="bg-gray-900 border-gray-800 hover:border-gray-700 transition-colors">
-                <CardHeader>
-                  <div className="flex justify-between items-start">
-                    <CardTitle className="text-white">{project.name}</CardTitle>
-                    <Badge variant={getStatusVariant(project.status)} className="ml-2">
-                      {project.status}
-                    </Badge>
-                  </div>
-                  <CardDescription className="text-gray-400">
-                    {project.description || "No description"}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex justify-between items-center">
-                    <Link href={`/projects/${project.id}`}>
-                      <Button variant="outline" size="sm" className="border-gray-700 text-white hover:bg-gray-800">
-                        Open
-                      </Button>
-                    </Link>
-                    {project.githubRepo && (
-                      <a
-                        href={`https://github.com/${project.githubRepo}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        <Button variant="ghost" size="sm" className="text-gray-400 hover:text-white">
-                          <ExternalLink className="h-4 w-4" />
-                        </Button>
-                      </a>
-                    )}
-                  </div>
-                </CardContent>
+              <Card
+                key={project.id}
+                className="bg-[#252526] border-[#3e3e42] hover:border-[#007acc] transition-all duration-200 cursor-pointer"
+              >
+                <Link href={`/projects/${project.id}`}>
+                  <CardHeader className="pb-3">
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <GitBranch className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                        <CardTitle className="text-base text-white truncate">
+                          {project.name}
+                        </CardTitle>
+                      </div>
+                      <StatusIndicator status={project.status} />
+                    </div>
+                    <CardDescription className="text-xs text-gray-400 mt-2 line-clamp-2">
+                      {project.description || "No description"}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="pt-0 pb-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1 text-xs text-gray-500">
+                        <Clock className="h-3 w-3" />
+                        <span>
+                          {new Date(project.updatedAt).toLocaleDateString('en-US', {
+                            month: 'short',
+                            day: 'numeric',
+                          })}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {project.githubRepo && (
+                          <a
+                            href={`https://github.com/${project.githubRepo}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 w-7 p-0 text-gray-400 hover:text-white hover:bg-[#37373d]"
+                            >
+                              <ExternalLink className="h-3 w-3" />
+                            </Button>
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Link>
               </Card>
             ))}
           </div>
@@ -102,17 +121,57 @@ export default async function ProjectsPage() {
   );
 }
 
-function getStatusVariant(status: string): "default" | "secondary" | "destructive" | "outline" {
+function StatusIndicator({ status }: { status: string }) {
+  const { color, pulseColor, label } = getStatusInfo(status);
+
+  return (
+    <div className="flex items-center gap-1.5">
+      <div className="relative">
+        <Circle className={cn("h-2 w-2", color)} fill="currentColor" />
+        {(status === "INITIALIZING" || status === "DEPLOYING") && (
+          <Circle
+            className={cn("h-2 w-2 absolute top-0 left-0 animate-ping", pulseColor)}
+            fill="currentColor"
+          />
+        )}
+      </div>
+      <span className="text-xs text-gray-400">{label}</span>
+    </div>
+  );
+}
+
+function getStatusInfo(status: string) {
   switch (status) {
     case "READY":
     case "DEPLOYED":
-      return "default";
+      return {
+        color: "text-green-500",
+        pulseColor: "",
+        label: "Ready"
+      };
     case "INITIALIZING":
+      return {
+        color: "text-yellow-500",
+        pulseColor: "text-yellow-500 opacity-75",
+        label: "Initializing"
+      };
     case "DEPLOYING":
-      return "secondary";
+      return {
+        color: "text-yellow-500",
+        pulseColor: "text-yellow-500 opacity-75",
+        label: "Deploying"
+      };
     case "ERROR":
-      return "destructive";
+      return {
+        color: "text-red-500",
+        pulseColor: "",
+        label: "Error"
+      };
     default:
-      return "outline";
+      return {
+        color: "text-gray-500",
+        pulseColor: "",
+        label: "Stopped"
+      };
   }
 }

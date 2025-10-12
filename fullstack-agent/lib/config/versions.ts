@@ -3,10 +3,11 @@
  * IMPORTANT: Always use specific version tags to ensure consistency
  */
 
+import { getRuntimeImage as getImage } from '../versions';
+
 export const VERSIONS = {
-  // Runtime container image version
-  // Update this when deploying new runtime versions
-  RUNTIME_IMAGE: 'fullstackagent/fullstack-web-runtime:v0.0.1-alpha.5',
+  // Runtime container image version - now using centralized version
+  RUNTIME_IMAGE: getImage(),
 
   // PostgreSQL version for KubeBlocks
   POSTGRESQL_VERSION: 'postgresql-14.8.0',
