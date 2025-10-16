@@ -4,6 +4,9 @@ import { prisma } from "@/lib/db";
 import { notFound } from "next/navigation";
 import ProjectSidebar from "@/components/project-sidebar";
 import ProjectSecondarySidebar from "@/components/project-secondary-sidebar";
+import { TerminalProvider } from "@/components/terminal-provider";
+import PersistentTerminal from "@/components/persistent-terminal";
+import ContentWrapper from "@/components/content-wrapper";
 
 export default async function ProjectLayout({
   children,
@@ -46,25 +49,33 @@ export default async function ProjectLayout({
   });
 
   return (
-    <div className="h-screen flex bg-[#1e1e1e] text-white overflow-hidden">
-      {/* Primary Sidebar - VSCode style */}
-      <ProjectSidebar
-        projects={projects}
-        currentProjectId={id}
-        userId={session.user.id}
-      />
+    <TerminalProvider>
+      <div className="h-screen flex bg-[#1e1e1e] text-white overflow-hidden">
+        {/* Primary Sidebar - VSCode style */}
+        <ProjectSidebar
+          projects={projects}
+          currentProjectId={id}
+          userId={session.user.id}
+        />
 
-      {/* Secondary Sidebar - Project Settings */}
-      <ProjectSecondarySidebar
-        project={project}
-        sandboxes={project.sandboxes}
-        envVars={project.environmentVariables}
-      />
+        {/* Secondary Sidebar - Project Settings */}
+        <ProjectSecondarySidebar
+          project={project}
+          sandboxes={project.sandboxes}
+          envVars={project.environmentVariables}
+        />
 
-      {/* Main Content Area */}
-      <div className="flex-1 flex flex-col min-w-0">
-        {children}
+        {/* Main Content Area */}
+        <div className="flex-1 flex flex-col min-w-0 relative">
+          {/* Persistent Terminal (hidden by default) */}
+          <PersistentTerminal projectId={id} />
+
+          {/* Regular Page Content - will be hidden when terminal is visible */}
+          <ContentWrapper>
+            {children}
+          </ContentWrapper>
+        </div>
       </div>
-    </div>
+    </TerminalProvider>
   );
 }

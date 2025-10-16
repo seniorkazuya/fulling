@@ -56,6 +56,8 @@ export default function SandboxProgress({ projectId, onComplete, onError }: Sand
   const [currentStageIndex, setCurrentStageIndex] = useState(0);
   const [startTime, setStartTime] = useState<number>(Date.now());
   const [pollCount, setPollCount] = useState(0);
+  const [hasStartedPolling, setHasStartedPolling] = useState(false);
+  const [retryMessage, setRetryMessage] = useState<string | null>(null);
 
   const updateStageStatus = (stageId: string, status: CreationStage["status"]) => {
     setStages(prev => prev.map(stage =>
@@ -68,86 +70,151 @@ export default function SandboxProgress({ projectId, onComplete, onError }: Sand
   const getCurrentStage = () => stages[currentStageIndex];
 
   const checkSandboxProgress = async () => {
+    const elapsed = Date.now() - startTime;
+
+    // 前5秒不查询API，只显示动画
+    if (!hasStartedPolling && elapsed < 5000) {
+      updateStageStatus("database", "in_progress");
+      setTimeout(checkSandboxProgress, 1000);
+      return;
+    }
+
+    // 开始轮询
+    if (!hasStartedPolling) {
+      setHasStartedPolling(true);
+    }
+
     try {
       const response = await fetch(`/api/sandbox/${projectId}`);
       const data = await response.json();
 
+      console.log(`[SandboxProgress] Poll #${pollCount + 1}, Status: ${data.status}, Error: ${data.error}, Elapsed: ${Math.floor(elapsed/1000)}s`);
       setPollCount(prev => prev + 1);
 
-      // Simulate stage progression based on poll count and status
-      if (data.status === "not_created") {
-        // Still not created, shouldn't happen if we're in progress
-        onError("Sandbox creation failed to start");
-        return;
-      }
+      // 简化的逻辑：30秒内不报错，1分钟后才在错误状态时报错
+      const shouldShowError = elapsed >= 60000 && (data.status === "terminated" || data.status === "error");
 
-      if (data.status === "creating") {
-        // Progress through stages based on time elapsed
-        const elapsed = Date.now() - startTime;
-        const current = getCurrentStage();
-
-        // Mark current stage as in progress
-        if (current?.status === "pending") {
-          updateStageStatus(current.id, "in_progress");
-        }
-
-        // Progress through stages based on elapsed time and poll count
-        if (elapsed > 2000 && currentStageIndex === 0) {
-          // Database creation typically takes 2-3 seconds
-          updateStageStatus("database", "completed");
-          setCurrentStageIndex(1);
-        } else if (elapsed > 5000 && currentStageIndex === 1) {
-          // Container provisioning
-          updateStageStatus("container", "completed");
-          setCurrentStageIndex(2);
-        } else if (elapsed > 8000 && currentStageIndex === 2) {
-          // Networking setup
-          updateStageStatus("networking", "completed");
-          setCurrentStageIndex(3);
-        } else if (elapsed > 12000 && currentStageIndex === 3) {
-          // Terminal initialization
-          updateStageStatus("terminal", "completed");
-          setCurrentStageIndex(4);
-        }
-
-        // Continue polling
-        setTimeout(checkSandboxProgress, 2000);
-      } else if (data.status === "running") {
-        // Complete all remaining stages
+      if (data.status === "running") {
+        // 成功运行
         stages.forEach((stage, index) => {
-          if (index <= currentStageIndex) {
-            updateStageStatus(stage.id, "completed");
-          }
+          updateStageStatus(stage.id, "completed");
         });
-        updateStageStatus("ready", "completed");
 
         if (data.sandbox?.ttydUrl) {
           onComplete(data.sandbox.ttydUrl);
         } else {
-          onError("Sandbox is running but terminal URL is not available");
+          // 即使没有URL，如果在1分钟内，继续重试
+          if (elapsed < 60000) {
+            setTimeout(checkSandboxProgress, 5000);
+          } else {
+            onError("Sandbox is running but terminal URL is not available");
+          }
         }
-      } else if (data.status === "error" || data.status === "terminated") {
-        // Mark current stage as error
+        return;
+      }
+
+      if (data.status === "creating") {
+        // 正在创建中，更新进度条
+        const current = getCurrentStage();
+        if (current?.status === "pending") {
+          updateStageStatus(current.id, "in_progress");
+        }
+
+        // 根据时间推进阶段
+        if (elapsed > 5000 && currentStageIndex === 0) {
+          updateStageStatus("database", "completed");
+          setCurrentStageIndex(1);
+        } else if (elapsed > 10000 && currentStageIndex === 1) {
+          updateStageStatus("container", "completed");
+          setCurrentStageIndex(2);
+        } else if (elapsed > 15000 && currentStageIndex === 2) {
+          updateStageStatus("networking", "completed");
+          setCurrentStageIndex(3);
+        } else if (elapsed > 20000 && currentStageIndex === 3) {
+          updateStageStatus("terminal", "completed");
+          setCurrentStageIndex(4);
+        }
+
+        setTimeout(checkSandboxProgress, 5000);
+        return;
+      }
+
+      // 处理错误状态
+      if (shouldShowError) {
+        // 只在1分钟后且状态为terminated或error时报错
         const current = getCurrentStage();
         if (current) {
           updateStageStatus(current.id, "error");
         }
-        onError(data.error || "Sandbox creation failed");
+
+        // 显示具体错误原因
+        let errorMessage = "Sandbox creation failed";
+        if (data.error) {
+          errorMessage = `Sandbox creation failed: ${data.error}`;
+        } else if (data.status === "terminated") {
+          errorMessage = "Sandbox was terminated during creation";
+        } else if (data.status === "error") {
+          errorMessage = "Sandbox creation encountered an error";
+        }
+
+        onError(errorMessage);
+        return;
       }
+
+      // 1分钟内，显示友好的重试提示
+      if (data.status === "error" || data.status === "terminated" || data.status === "not_created") {
+        let message = "";
+        if (data.status === "error") {
+          message = "Encountered temporary error, retrying...";
+        } else if (data.status === "terminated") {
+          message = "Resource was terminated, attempting to recreate...";
+        } else if (data.status === "not_created") {
+          message = "Waiting for resource creation to begin...";
+        }
+        setRetryMessage(message);
+      } else {
+        setRetryMessage(null);
+      }
+
+      // 1分钟内或状态正常，继续轮询
+      if (elapsed < 30000) {
+        // 前30秒，显示正在重试
+        const current = getCurrentStage();
+        if (current?.status === "pending") {
+          updateStageStatus(current.id, "in_progress");
+        }
+      }
+
+      // 每5秒轮询一次
+      setTimeout(checkSandboxProgress, 5000);
+
     } catch (error) {
       console.error("Error checking sandbox progress:", error);
-      const current = getCurrentStage();
-      if (current) {
-        updateStageStatus(current.id, "error");
+
+      // 网络错误也遵循同样的规则：1分钟内不报错
+      if (elapsed >= 60000) {
+        const current = getCurrentStage();
+        if (current) {
+          updateStageStatus(current.id, "error");
+        }
+        onError(`Network error while checking status: ${error}`);
+        return;
       }
-      onError("Failed to check sandbox creation status");
+
+      // 1分钟内，继续重试
+      if (currentStageIndex === 0 && stages[0].status === "pending") {
+        updateStageStatus("database", "in_progress");
+      }
+
+      setTimeout(checkSandboxProgress, 5000);
     }
   };
 
   useEffect(() => {
     setStartTime(Date.now());
-    // Start checking progress immediately
-    setTimeout(checkSandboxProgress, 1000);
+    // Start checking progress after a short delay
+    // This gives time for the initial animation to show
+    setTimeout(checkSandboxProgress, 500);
   }, [projectId]);
 
   const getStageIcon = (stage: CreationStage) => {
@@ -187,6 +254,11 @@ export default function SandboxProgress({ projectId, onComplete, onError }: Sand
               <p className="text-sm text-gray-500 mt-2">
                 Elapsed time: {getElapsedTime()}
               </p>
+              {retryMessage && (
+                <p className="text-sm text-yellow-500 mt-2 animate-pulse">
+                  {retryMessage}
+                </p>
+              )}
             </div>
 
             {/* Progress Stages */}

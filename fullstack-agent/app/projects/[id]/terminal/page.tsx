@@ -1,41 +1,20 @@
-import { auth } from "@/lib/auth";
-import { redirect } from "next/navigation";
-import { prisma } from "@/lib/db";
-import { notFound } from "next/navigation";
-import Terminal from "@/components/terminal";
+"use client";
 
-export default async function TerminalPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
-  const session = await auth();
+import { useEffect } from "react";
+import { useParams } from "next/navigation";
+import { useTerminal } from "@/components/terminal-provider";
 
-  if (!session) {
-    redirect("/login");
-  }
+export default function TerminalPage() {
+  const params = useParams();
+  const projectId = params.id as string;
+  const { showTerminal } = useTerminal();
 
-  const { id } = await params;
+  useEffect(() => {
+    // When this page loads, show the terminal
+    showTerminal(projectId);
+  }, [projectId, showTerminal]);
 
-  const project = await prisma.project.findFirst({
-    where: {
-      id: id,
-      userId: session.user.id,
-    },
-    include: {
-      sandboxes: true,
-    },
-  });
-
-  if (!project) {
-    notFound();
-  }
-
-  const sandbox = project.sandboxes[0];
-
-  if (!sandbox) {
-    redirect(`/projects/${id}`);
-  }
-
-  return <Terminal sandbox={sandbox} projectId={id} />;
+  // The actual terminal is rendered in the layout as a persistent component
+  // This page just triggers its visibility
+  return null;
 }

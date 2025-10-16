@@ -20,7 +20,7 @@ export default function TerminalComponent({ projectId, sandboxUrl }: TerminalCom
   const [showProgress, setShowProgress] = useState(false);
 
   // Check sandbox status
-  const checkSandboxStatus = async () => {
+  const checkSandboxStatus = async (skipProgressReset = false) => {
     try {
       const response = await fetch(`/api/sandbox/${projectId}`);
       const data = await response.json();
@@ -29,21 +29,21 @@ export default function TerminalComponent({ projectId, sandboxUrl }: TerminalCom
         if (data.status === "running") {
           setSandboxStatus("running");
           setTtydUrl(data.sandbox.ttydUrl);
-          setShowProgress(false);
+          if (!skipProgressReset) setShowProgress(false);
         } else if (data.status === "creating") {
           setSandboxStatus("creating");
-          setShowProgress(true); // Show progress component for existing creating sandbox
+          if (!skipProgressReset) setShowProgress(true); // Show progress component for existing creating sandbox
         } else {
           setSandboxStatus(data.status || "stopped");
           setTtydUrl(data.sandbox.ttydUrl);
-          setShowProgress(false);
+          if (!skipProgressReset) setShowProgress(false);
         }
       } else if (data.status === "not_created") {
         setSandboxStatus("not_created");
-        setShowProgress(false);
+        if (!skipProgressReset) setShowProgress(false);
       } else {
         setSandboxStatus(data.status || "stopped");
-        setShowProgress(false);
+        if (!skipProgressReset) setShowProgress(false);
       }
     } catch (err) {
       console.error("Error checking sandbox status:", err);
@@ -56,38 +56,49 @@ export default function TerminalComponent({ projectId, sandboxUrl }: TerminalCom
     setLoading(true);
     setError(null);
 
-    try {
-      const response = await fetch(`/api/sandbox/${projectId}`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({}),
-      });
+    // Immediately show progress UI for better user experience
+    setShowProgress(true);
+    setSandboxStatus("creating");
+    setLoading(false);
 
-      const data = await response.json();
-
-      if (response.ok) {
-        if (data.status === "already_running") {
-          setSandboxStatus("running");
-          setTtydUrl(data.sandbox.ttydUrl);
+    // Call API in background - don't await it
+    fetch(`/api/sandbox/${projectId}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({}),
+    })
+      .then(response => response.json().then(data => ({ response, data })))
+      .then(({ response, data }) => {
+        if (response.ok) {
+          if (data.status === "already_running") {
+            // If already running, immediately transition to running state
+            setSandboxStatus("running");
+            setTtydUrl(data.sandbox.ttydUrl);
+            setShowProgress(false);
+          } else if (data.status === "created") {
+            // Sandbox is being created, keep showing progress
+            console.log("Sandbox creation initiated:", data);
+            // Progress component is already showing, it will handle the rest
+            // Don't hide progress here!
+          } else {
+            // Unknown success status, keep showing progress
+            console.log("Sandbox creation response:", data);
+            // Don't hide progress here!
+          }
         } else {
-          // Show progress component instead of simple creating state
-          setShowProgress(true);
-          setSandboxStatus("creating");
+          // API returned error, but let the progress component handle it
+          // The progress component will retry and show appropriate messages
+          console.log("Sandbox creation API error:", data.error);
+          // Don't hide progress here! Let the progress component handle errors
         }
-
-        // Show success message
-        console.log("Sandbox started:", data);
-      } else {
-        setError(data.error || "Failed to start sandbox");
-      }
-    } catch (err) {
-      console.error("Error starting sandbox:", err);
-      setError("Failed to start sandbox");
-    } finally {
-      setLoading(false);
-    }
+      })
+      .catch(err => {
+        // Network error, but let the progress component handle it
+        console.error("Error starting sandbox:", err);
+        // Don't hide progress here! Let the progress component handle network errors
+      });
   };
 
 
@@ -105,11 +116,14 @@ export default function TerminalComponent({ projectId, sandboxUrl }: TerminalCom
   };
 
   useEffect(() => {
-    checkSandboxStatus();
-  }, [projectId]);
+    // Don't check status if we're already showing progress
+    if (!showProgress) {
+      checkSandboxStatus();
+    }
+  }, [projectId]); // Remove showProgress from deps to avoid infinite loop
 
-  // Show progress component during creation
-  if (showProgress && sandboxStatus === "creating") {
+  // Show progress component when showProgress is true
+  if (showProgress) {
     return (
       <SandboxProgress
         projectId={projectId}
@@ -120,7 +134,7 @@ export default function TerminalComponent({ projectId, sandboxUrl }: TerminalCom
   }
 
   // If sandbox is not running, show control panel
-  if (sandboxStatus !== "running" && sandboxStatus !== "creating") {
+  if (sandboxStatus !== "running") {
     return (
       <div className="h-full w-full bg-black rounded-lg p-4">
         <Card className="bg-gray-900 border-gray-800">

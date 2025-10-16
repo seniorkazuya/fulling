@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { cn } from "@/lib/utils";
+import { useTerminal } from "@/components/terminal-provider";
+import { usePathname, useRouter } from "next/navigation";
 import {
   ChevronLeft,
   ChevronRight,
@@ -28,6 +30,26 @@ export default function ProjectSecondarySidebar({
   envVars,
 }: ProjectSecondarySidebarProps) {
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const { showTerminal, hideTerminal, isTerminalVisible } = useTerminal();
+  const pathname = usePathname();
+  const router = useRouter();
+
+  const handleSectionClick = (e: React.MouseEvent, sectionId: string, href: string) => {
+    e.preventDefault();
+
+    if (sectionId === "terminal") {
+      // For terminal, just toggle visibility without navigation
+      if (!isTerminalVisible) {
+        showTerminal(project.id);
+        // Update URL without navigation
+        window.history.pushState({}, '', href);
+      }
+    } else {
+      // For other sections, hide terminal and navigate
+      hideTerminal();
+      router.push(href);
+    }
+  };
 
   const sections: Array<{
     id: string;
@@ -35,8 +57,8 @@ export default function ProjectSecondarySidebar({
     icon: any;
     href: string;
   }> = [
-    { id: "database", label: "Database Connection", icon: Database, href: `/projects/${project.id}/database` },
     { id: "terminal", label: "Web Terminal", icon: Terminal, href: `/projects/${project.id}/terminal` },
+    { id: "database", label: "Database Connection", icon: Database, href: `/projects/${project.id}/database` },
     { id: "environment", label: "Environment Variables", icon: Package, href: `/projects/${project.id}/environment` },
     { id: "secrets", label: "Secret Configuration", icon: Key, href: `/projects/${project.id}/secrets` },
     { id: "auth", label: "Auth Configuration", icon: Shield, href: `/projects/${project.id}/auth` },
@@ -75,11 +97,17 @@ export default function ProjectSecondarySidebar({
         <div className="flex-1 overflow-y-auto">
           {sections.map((section) => {
             const Icon = section.icon;
+            const isActive = pathname === section.href || (section.id === "terminal" && isTerminalVisible);
+
             return (
               <a
                 key={section.id}
                 href={section.href}
-                className="w-full flex items-center px-3 py-2 text-sm hover:bg-[#2a2d2e] transition-colors"
+                onClick={(e) => handleSectionClick(e, section.id, section.href)}
+                className={cn(
+                  "w-full flex items-center px-3 py-2 text-sm transition-colors",
+                  isActive ? "bg-[#2a2d2e]" : "hover:bg-[#2a2d2e]"
+                )}
               >
                 <Icon className="h-4 w-4 mr-2 text-gray-400" />
                 <span className="text-gray-300">{section.label}</span>

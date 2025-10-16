@@ -1,11 +1,50 @@
 import NextAuth from 'next-auth';
 import GitHub from 'next-auth/providers/github';
+import Credentials from 'next-auth/providers/credentials';
+import bcrypt from 'bcryptjs';
 // import { PrismaAdapter } from '@auth/prisma-adapter';
 import { prisma } from '@/lib/db';
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   // adapter: PrismaAdapter(prisma) as any,
   providers: [
+    Credentials({
+      name: 'credentials',
+      credentials: {
+        email: { label: "Email", type: "email" },
+        password: { label: "Password", type: "password" }
+      },
+      async authorize(credentials) {
+        if (!credentials?.email || !credentials?.password) {
+          return null;
+        }
+
+        const user = await prisma.user.findUnique({
+          where: {
+            email: credentials.email as string,
+          },
+        });
+
+        if (!user || !user.password) {
+          return null;
+        }
+
+        const passwordMatch = await bcrypt.compare(
+          credentials.password as string,
+          user.password
+        );
+
+        if (!passwordMatch) {
+          return null;
+        }
+
+        return {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+        };
+      },
+    }),
     GitHub({
       clientId: process.env.GITHUB_CLIENT_ID!,
       clientSecret: process.env.GITHUB_CLIENT_SECRET!,
@@ -56,27 +95,34 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       }
       return true;
     },
+    async jwt({ token, user }) {
+      if (user) {
+        token.id = user.id;
+      }
+      return token;
+    },
     async session({ session, token }) {
-      if (session.user && token.sub) {
-        // Get the actual user ID from database
-        const dbUser = await prisma.user.findFirst({
+      if (session.user) {
+        if (token.id) {
+          session.user.id = token.id as string;
+        }
+
+        // Get the actual user from database
+        const dbUser = await prisma.user.findUnique({
           where: {
-            OR: [
-              { githubId: token.sub },
-              { email: session.user.email! }
-            ]
+            id: session.user.id
           }
         });
 
         if (dbUser) {
-          session.user.id = dbUser.id;
           session.user.githubToken = dbUser.githubToken || undefined;
-        } else {
-          session.user.id = token.sub;
         }
       }
       return session;
     },
+  },
+  session: {
+    strategy: 'jwt',
   },
   pages: {
     signIn: '/login',

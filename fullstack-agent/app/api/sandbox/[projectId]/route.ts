@@ -39,10 +39,26 @@ export async function GET(
 
     // Check Kubernetes pod status
     try {
-      const status = await k8sService.getSandboxStatus(project.name, sandbox.k8sNamespace);
+      // Always use namespace from kubeconfig
+      const k8sNamespace = k8sService.getDefaultNamespace();
+      const status = await k8sService.getSandboxStatus(project.name, k8sNamespace);
+
+      // Map Kubernetes status to our API status
+      let apiStatus = status.toLowerCase();
+
+      // If sandbox is marked as CREATING in database but pod doesn't exist yet (TERMINATED),
+      // keep returning "creating" status - this is normal during startup
+      if (sandbox.status === "CREATING" && status === "TERMINATED") {
+        apiStatus = "creating";
+      }
+
+      // If we get ERROR from k8s, but sandbox is marked as CREATING, it's still creating
+      if (sandbox.status === "CREATING" && status === "ERROR") {
+        apiStatus = "creating";
+      }
 
       return NextResponse.json({
-        status: status.toLowerCase(),
+        status: apiStatus,
         sandbox: {
           id: sandbox.id,
           publicUrl: sandbox.publicUrl,
@@ -52,6 +68,21 @@ export async function GET(
       });
     } catch (error) {
       console.error("Error checking sandbox status:", error);
+
+      // If we can't check k8s status but sandbox is marked as CREATING, assume it's still creating
+      if (sandbox.status === "CREATING") {
+        return NextResponse.json({
+          status: "creating",
+          sandbox: {
+            id: sandbox.id,
+            publicUrl: sandbox.publicUrl,
+            ttydUrl: sandbox.ttydUrl,
+            status: sandbox.status,
+          }
+        });
+      }
+
+      // Only return error if sandbox is not in CREATING state
       return NextResponse.json({
         status: "error",
         error: "Failed to check sandbox status"
@@ -100,7 +131,9 @@ export async function POST(
     let sandbox = project.sandboxes[0];
     if (sandbox) {
       // Check if pod is running
-      const status = await k8sService.getSandboxStatus(project.name, sandbox.k8sNamespace);
+      // Always use namespace from kubeconfig
+      const k8sNamespace = k8sService.getDefaultNamespace();
+      const status = await k8sService.getSandboxStatus(project.name, k8sNamespace);
 
       if (status === 'RUNNING') {
         return NextResponse.json({
@@ -116,7 +149,9 @@ export async function POST(
 
       // If not running, delete the old deployment and create a new one
       try {
-        await k8sService.deleteSandbox(project.name, sandbox.k8sNamespace);
+        // Always use the namespace from kubeconfig, not from sandbox record
+        const deleteNamespace = k8sService.getDefaultNamespace();
+        await k8sService.deleteSandbox(project.name, deleteNamespace);
       } catch (error) {
         console.log("Failed to delete old sandbox, continuing...");
       }
@@ -343,7 +378,9 @@ export async function DELETE(
 
     try {
       // Delete Kubernetes resources
-      await k8sService.deleteSandbox(project.name, sandbox.k8sNamespace);
+      // Always use namespace from kubeconfig
+      const k8sNamespace = k8sService.getDefaultNamespace();
+      await k8sService.deleteSandbox(project.name, k8sNamespace);
 
       // Update sandbox status
       await prisma.sandbox.update({
