@@ -56,6 +56,9 @@ RUN npm install -g \
     vercel \
     prisma
 
+# Install Claude Code CLI
+RUN npm install -g @anthropic-ai/claude-code
+
 # Install shadcn/ui CLI and related tools
 RUN npm install -g \
     shadcn-ui \
@@ -63,9 +66,9 @@ RUN npm install -g \
     autoprefixer \
     postcss
 
-# Install Claude Code CLI
-RUN curl -fsSL https://console.anthropic.com/install.sh | sh && \
-    echo 'export PATH="/root/.local/bin:$PATH"' >> ~/.bashrc
+# Set up a non-root user for better security (must be before creating user-specific directories)
+RUN useradd -m -s /bin/bash developer && \
+    echo 'developer ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
 
 # Install Buildah and related container tools for unprivileged operation
 RUN apt-get update && \
@@ -140,10 +143,6 @@ RUN wget -O /tmp/ttyd https://github.com/tsl0922/ttyd/releases/latest/download/t
 
 # Create working directory
 WORKDIR /workspace
-
-# Set up a non-root user for better security (optional, can be overridden)
-RUN useradd -m -s /bin/bash developer && \
-    echo 'developer ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
 
 # Copy entrypoint script
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
