@@ -87,8 +87,16 @@ export default function ProjectTerminalView({
     }
   };
 
+  const [startSandboxTrigger, setStartSandboxTrigger] = useState(0);
+
   const handleOperation = async (operation: string) => {
-    // TODO: Implement actual operations via API
+    if (operation === "start") {
+      // Trigger sandbox start in TerminalComponent
+      setStartSandboxTrigger(prev => prev + 1);
+      return;
+    }
+
+    // TODO: Implement other operations via API
     console.log(`Performing operation: ${operation}`);
   };
 
@@ -200,6 +208,7 @@ export default function ProjectTerminalView({
               projectId={project.id}
               sandboxUrl={sandbox?.publicUrl}
               terminalId={terminal.id}
+              startSandboxTrigger={startSandboxTrigger}
             />
           </div>
         ))}

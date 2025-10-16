@@ -10,14 +10,16 @@ interface TerminalComponentProps {
   projectId: string;
   sandboxUrl?: string;
   terminalId?: string;
+  startSandboxTrigger?: number;
 }
 
-export default function TerminalComponent({ projectId, sandboxUrl }: TerminalComponentProps) {
+export default function TerminalComponent({ projectId, sandboxUrl, startSandboxTrigger }: TerminalComponentProps) {
   const [sandboxStatus, setSandboxStatus] = useState<string>("checking");
   const [ttydUrl, setTtydUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showProgress, setShowProgress] = useState(false);
+  const [isCreating, setIsCreating] = useState(false); // Prevent status reset during creation
 
   // Check sandbox status
   const checkSandboxStatus = async (skipProgressReset = false) => {
@@ -29,21 +31,26 @@ export default function TerminalComponent({ projectId, sandboxUrl }: TerminalCom
         if (data.status === "running") {
           setSandboxStatus("running");
           setTtydUrl(data.sandbox.ttydUrl);
-          if (!skipProgressReset) setShowProgress(false);
+          // Only reset progress if not in creation process
+          if (!skipProgressReset && !isCreating) setShowProgress(false);
         } else if (data.status === "creating") {
           setSandboxStatus("creating");
-          if (!skipProgressReset) setShowProgress(true); // Show progress component for existing creating sandbox
+          // Always show progress when status is creating
+          if (!skipProgressReset) setShowProgress(true);
         } else {
           setSandboxStatus(data.status || "stopped");
           setTtydUrl(data.sandbox.ttydUrl);
-          if (!skipProgressReset) setShowProgress(false);
+          // Only reset progress if not in creation process
+          if (!skipProgressReset && !isCreating) setShowProgress(false);
         }
       } else if (data.status === "not_created") {
         setSandboxStatus("not_created");
-        if (!skipProgressReset) setShowProgress(false);
+        // Only reset progress if not in creation process
+        if (!skipProgressReset && !isCreating) setShowProgress(false);
       } else {
         setSandboxStatus(data.status || "stopped");
-        if (!skipProgressReset) setShowProgress(false);
+        // Only reset progress if not in creation process
+        if (!skipProgressReset && !isCreating) setShowProgress(false);
       }
     } catch (err) {
       console.error("Error checking sandbox status:", err);
@@ -55,6 +62,9 @@ export default function TerminalComponent({ projectId, sandboxUrl }: TerminalCom
   const startSandbox = async () => {
     setLoading(true);
     setError(null);
+
+    // Set creation lock to prevent status resets
+    setIsCreating(true);
 
     // Immediately show progress UI for better user experience
     setShowProgress(true);
@@ -107,17 +117,26 @@ export default function TerminalComponent({ projectId, sandboxUrl }: TerminalCom
     setSandboxStatus("running");
     setTtydUrl(ttydUrl);
     setShowProgress(false);
+    setIsCreating(false); // Release creation lock
   };
 
   const handleProgressError = (error: string) => {
     setError(error);
     setSandboxStatus("error");
     setShowProgress(false);
+    setIsCreating(false); // Release creation lock
   };
 
+  // Trigger sandbox start when external trigger changes
   useEffect(() => {
-    // Don't check status if we're already showing progress
-    if (!showProgress) {
+    if (startSandboxTrigger && startSandboxTrigger > 0) {
+      startSandbox();
+    }
+  }, [startSandboxTrigger]);
+
+  useEffect(() => {
+    // Don't check status if we're already showing progress or in creation process
+    if (!showProgress && !isCreating) {
       checkSandboxStatus();
     }
   }, [projectId]); // Remove showProgress from deps to avoid infinite loop

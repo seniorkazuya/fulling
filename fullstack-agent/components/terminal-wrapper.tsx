@@ -15,8 +15,9 @@ interface TerminalWrapperProps {
   projectId: string;
   sandboxUrl?: string;
   terminalId?: string;
+  startSandboxTrigger?: number;
 }
 
-export default function TerminalWrapper({ projectId, sandboxUrl, terminalId }: TerminalWrapperProps) {
-  return <Terminal projectId={projectId} sandboxUrl={sandboxUrl} terminalId={terminalId} />;
+export default function TerminalWrapper({ projectId, sandboxUrl, terminalId, startSandboxTrigger }: TerminalWrapperProps) {
+  return <Terminal projectId={projectId} sandboxUrl={sandboxUrl} terminalId={terminalId} startSandboxTrigger={startSandboxTrigger} />;
 }
