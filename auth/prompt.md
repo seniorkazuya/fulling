@@ -1,27 +1,27 @@
-Auth configuration 比较多，未来也会扩展更多，不要在侧面栏下面处理，在右边主展示区展示和操作.
+There are many auth configurations and more will be expanded in the future. Do not handle them in the sidebar; display and operate them in the right main display area.
 
-## Github Authentic Configuration
+## GitHub Authentication Configuration
 
-包含配置：
+Configuration includes:
 * Client ID
 * Client Secret
 * Homepage URL
 * Authorization callback URL
 
-设置这些字段，而且要告诉用户对应的环境变量名称是什么
+Set these fields and tell users what the corresponding environment variable names are.
 
-## Google Authentic Configuration
+## Google Authentication Configuration
 
 * Client ID
 * Client Secret
 * Homepage URL
 * Authorization callback URL
 
-设置这些字段，而且要告诉用户对应的环境变量名称是什么
+Set these fields and tell users what the corresponding environment variable names are.
 
 ## NextAuth Settings
 
-* 自动填充好项目的主域名，就是映射 3000 端口的域名。
-* NextAuth secret 自动为用户生成
+* Automatically fill in the project's main domain, which is the domain mapping port 3000.
+* NextAuth secret is automatically generated for the user.
 
-设置这些字段，而且要告诉用户对应的环境变量名称是什么
+Set these fields and tell users what the corresponding environment variable names are.

@@ -1,32 +1,32 @@
-### **重塑版产品需求文档：AI全栈工程Agent平台**
+### **Reshaped Product Requirements Document: AI Full-Stack Engineering Agent Platform**
 
-### **1. 项目核心与愿景**
+### **1. Project Core and Vision**
 
-- **核心问题:** 即使拥有现代化的技术栈（如Next.js），从一个想法到构建、部署并维护一个功能完备的全栈Web应用，仍然是一个复杂、耗时且充满挑战的过程。开发者需要处理大量的模板代码、基础设施配置、部署流程和持续的维护工作。
-- **产品愿景:** 我们不再是为开发者提供工具，**我们本身就是开发工具的终极形态——一个AI驱动的全栈工程Agent**。我们的愿景是打造一个智能的、自动化的SaaS平台，该平台能理解用户的自然语言需求，并自主完成从项目创建、编码、配置、部署到迭代的全过程。
-- **最终价值:** 彻底改变Web应用的开发范式。让任何用户（无论是专业开发者还是产品经理）都能通过与AI Agent对话，在几分钟内将一个应用构想，转变为一个部署在**隔离沙箱环境**中的、生产就绪的全栈应用程序。我们**固化并优化最佳实践技术栈 (Next.js, PostgreSQL, Shadcn/UI)**，让用户完全从基础设施的复杂性中解放出来，专注于“创造什么”，而非“如何创造”。
+- **Core Problem:** Even with modern technology stacks (like Next.js), building, deploying, and maintaining a fully functional full-stack web application from an idea remains a complex, time-consuming, and challenging process. Developers need to handle extensive boilerplate code, infrastructure configuration, deployment processes, and ongoing maintenance work.
+- **Product Vision:** We are no longer just providing tools for developers—**we are the ultimate form of development tools—an AI-driven full-stack engineering Agent**. Our vision is to create an intelligent, automated SaaS platform that can understand users' natural language requirements and autonomously complete the entire process from project creation, coding, configuration, deployment to iteration.
+- **Ultimate Value:** Fundamentally transform the development paradigm of web applications. Enable any user (whether professional developers or product managers) to transform an application concept into a production-ready full-stack application deployed in an **isolated sandbox environment** within minutes through dialogue with an AI Agent. We **solidify and optimize the best practice technology stack (Next.js, PostgreSQL, Shadcn/UI)**, completely freeing users from infrastructure complexity to focus on "what to create" rather than "how to create."
 
-### **2. 目标用户与关键场景**
+### **2. Target Users and Key Scenarios**
 
-- **目标用户:**
-    - **核心用户:** TypeScript/Next.js 开发者、独立开发者（Indie Hackers）、AI爱好者和技术创业公司。他们追求极致的开发效率，希望将精力集中在业务逻辑和产品创新上。
-    - **拓展用户:** 产品经理、设计师和技术背景较弱的创始人。他们可以利用本平台快速验证想法，创建功能性的原型（MVP）甚至正式产品。
-- **用户使用核心流程与核心功能:**
-    - 核心流程：从零到一的自动化应用创建
-        1. 用户在平台上创建一个 Project.
-        2. 系统 调用 kubernetes API 创建一个 PostgreSQL 数据库. 如何创建参考 yaml/database 目录中的示例和 Readme
-        3. 系统 调用Kubernetes (k8s) API (kubeconfig 我已经放到 .secret 目录了, service deployment 的示例 yaml 已经放到 yaml/sandbox 目录了)，为该应用创建一个隔离的开发环境沙箱（包含Next.js服务和PostgreSQL数据库客户端）沙箱的 Docker 镜像我已经构建完成
-        4. 需要为 deployment 设置好 claude code 的环境变量,在 .secret/.env 中获取.数据库的环境变量, 调用 kubernetes API 获取 secret 和 service, 具体名称是什么自己去查.
-        5. 系统主界面自动打开沙箱的 web terminal, 并自动调用 claude code 命令
-        6. 用户拷贝自己的需求，并让 claude code 实现代码
-        7. 将所有代码提交到一个GitHub仓库中。这里需要用户授权 github 账号，关联用户已经创建的项目或者帮助用户创建一个 github 仓库，两个选择，创建仓库会获取用户创建仓库的权限。授权已有仓库就直接向仓库中提交代码。
-        8. 完成部署，界面显示一个可公开访问的URL。
-    - 支持用户配置功能：环境配置
-        用户需要为一个第三方服务（如Stripe）配置API密钥。他可以通过平台的环境变量管理界面轻松添加该密钥，Agent将确保运行时环境能够安全地访问它。用户可以配置环境变量和密钥，都以 KV 形式存储在沙箱的 .env 环境变量中。 
-        针对认证的配置，显示的提供配置界面，如 google 认证，github 认证等，参数与第三方保持一致，方便用户配置。
-        针对支付配置，显示的提供配置界面，先支持 stripe 的支付配置。这些信息都存储到环境变量中，且告诉模型这些上下文信息，方便模型编码时引用这些 KEY.
+- **Target Users:**
+    - **Core Users:** TypeScript/Next.js developers, independent developers (Indie Hackers), AI enthusiasts, and tech startups. They pursue extreme development efficiency and want to focus their energy on business logic and product innovation.
+    - **Extended Users:** Product managers, designers, and founders with limited technical backgrounds. They can use this platform to quickly validate ideas, create functional prototypes (MVPs), or even formal products.
+- **User Core Workflow and Core Functions:**
+    - Core Workflow: Automated application creation from zero to one
+        1. Users create a Project on the platform.
+        2. The system calls the Kubernetes API to create a PostgreSQL database. For creation reference, see examples in the yaml/database directory and Readme.
+        3. The system calls the Kubernetes (k8s) API (kubeconfig is placed in the .secret directory, example YAML for service deployment is in the yaml/sandbox directory) to create an isolated development environment sandbox for the application (including Next.js service and PostgreSQL database client). The sandbox Docker image has been built.
+        4. Need to set up Claude Code environment variables for the deployment, obtained from .secret/.env. For database environment variables, call the Kubernetes API to get secrets and services—check specific names yourself.
+        5. The system main interface automatically opens the sandbox's web terminal and automatically calls the Claude Code command.
+        6. Users copy their requirements and have Claude Code implement the code.
+        7. Commit all code to a GitHub repository. This requires users to authorize their GitHub account, either linking to an existing project or helping users create a GitHub repository. Two options: creating a repository requires repository creation permissions; authorizing an existing repository directly commits code to the repository.
+        8. Complete deployment, displaying a publicly accessible URL in the interface.
+    - Support user configuration features: Environment configuration
+        Users need to configure API keys for third-party services (like Stripe). They can easily add these keys through the platform's environment variable management interface, and the Agent will ensure the runtime environment can securely access them. Users can configure environment variables and secrets, both stored as KV pairs in the sandbox's .env environment variables.
+        For authentication configuration, provide explicit configuration interfaces such as Google authentication, GitHub authentication, etc., with parameters consistent with third-party services for user convenience.
+        For payment configuration, provide explicit configuration interfaces, starting with Stripe payment configuration. This information is stored in environment variables and provided to the model as context for easy reference during coding.
 
-## 系统架构
+## System Architecture
 
 ```
 FullstackAgent pod --> User Runtime pod and a pgsql database
@@ -34,18 +34,18 @@ FullstackAgent pod --> User Runtime pod and a pgsql database
                     +-> UserRuntime pod and a pgsql database
 
 ```
-FullstackAgent pod 通过调用 kubernetes 接口为每个 Project 创建一个容器，每个 User Runtime pod 暴露多个端口，包含 ttyd 端口和用户业务的访问端口。
+The FullstackAgent pod creates a container for each Project by calling the Kubernetes interface. Each User Runtime pod exposes multiple ports, including the ttyd port and user business access ports.
 
-FullstackAgent pod 页面上直接 iframe 嵌套 ttyd 的链接, 把 User Runtime pod 的业务访问 URL 显示在界面上
+The FullstackAgent pod page directly embeds the ttyd link via iframe and displays the User Runtime pod's business access URL on the interface.
 
-FullstackAgent 在创建工程时为每个项目创建一个独立的数据库实例，通过调用 Kuberntes 接口实现，示例 yaml 在 yaml 目录下，注意事项在 yaml/README.md 中
+FullstackAgent creates an independent database instance for each project when creating projects, implemented by calling the Kubernetes interface. Example YAML is in the yaml directory, and notes are in yaml/README.md.
 
-## 实现方式
+## Implementation Method
 
-本工程技术栈也使用 Next.js, PostgreSQL, Shadcn/UI, 技术栈实现，要求界面简约美观，主色调以黑白灰为主，要求交互友好。
+This project's technology stack also uses Next.js, PostgreSQL, Shadcn/UI. The interface should be simple and beautiful, with a black, white, and gray color scheme, and friendly interactions.
 
-本项目采用远程开发方式，外部域名和端口是 https://dgkwlntjskms.usw.sealos.io, 所以实现时请监听 0.0.0.0:3000 端口
+This project uses remote development, with external domain and port being https://dgkwlntjskms.usw.sealos.io, so please listen on port 0.0.0.0:3000 during implementation.
 
-本项目的数据库已经常建好，见 .env 中的 DATABASE 环境变量
+The database for this project has already been created, see the DATABASE environment variable in .env.
 
-kubeconfig 没有 create namespace 的权限，namespace 直接使用 kubeconfig 中已有的即可
+The kubeconfig does not have create namespace permissions, so use the existing namespace in the kubeconfig directly.

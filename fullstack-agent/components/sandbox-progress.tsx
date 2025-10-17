@@ -72,14 +72,14 @@ export default function SandboxProgress({ projectId, onComplete, onError }: Sand
   const checkSandboxProgress = async () => {
     const elapsed = Date.now() - startTime;
 
-    // 前5秒不查询API，只显示动画
+    // Don't query API for first 5 seconds, only show animation
     if (!hasStartedPolling && elapsed < 5000) {
       updateStageStatus("database", "in_progress");
       setTimeout(checkSandboxProgress, 1000);
       return;
     }
 
-    // 开始轮询
+    // Start polling
     if (!hasStartedPolling) {
       setHasStartedPolling(true);
     }
@@ -119,11 +119,11 @@ export default function SandboxProgress({ projectId, onComplete, onError }: Sand
       console.log(`[SandboxProgress] Poll #${pollCount + 1}, Status: ${data.status}, Error: ${data.error || 'none'}, Elapsed: ${Math.floor(elapsed/1000)}s`);
       setPollCount(prev => prev + 1);
 
-      // 简化的逻辑：30秒内不报错，1分钟后才在错误状态时报错
+      // Simplified logic: Don't show errors within 30 seconds, only show errors after 1 minute when in error state
       const shouldShowError = elapsed >= 60000 && (data.status === "terminated" || data.status === "error");
 
       if (data.status === "running") {
-        // 成功运行
+        // Successfully running
         console.log("[SandboxProgress] Sandbox is running!");
         stages.forEach((stage, index) => {
           updateStageStatus(stage.id, "completed");
@@ -135,7 +135,7 @@ export default function SandboxProgress({ projectId, onComplete, onError }: Sand
           onComplete(data.sandbox.ttydUrl);
         } else {
           console.warn("[SandboxProgress] Sandbox running but no ttydUrl, data:", data);
-          // 即使没有URL，如果在1分钟内，继续重试
+          // Even without URL, if within 1 minute, continue retrying
           if (elapsed < 60000) {
             setRetryMessage("Terminal URL not yet available, retrying...");
             setTimeout(checkSandboxProgress, 5000);
@@ -147,14 +147,14 @@ export default function SandboxProgress({ projectId, onComplete, onError }: Sand
       }
 
       if (data.status === "creating") {
-        // 正在创建中，更新进度条
+        // Creating in progress, update progress bar
         console.log("[SandboxProgress] Sandbox is creating, updating progress...");
         const current = getCurrentStage();
         if (current?.status === "pending") {
           updateStageStatus(current.id, "in_progress");
         }
 
-        // 根据时间推进阶段
+        // Advance stages based on elapsed time
         if (elapsed > 5000 && currentStageIndex === 0) {
           updateStageStatus("database", "completed");
           setCurrentStageIndex(1);
@@ -173,16 +173,16 @@ export default function SandboxProgress({ projectId, onComplete, onError }: Sand
         return;
       }
 
-      // 处理错误状态
+      // Handle error states
       if (shouldShowError) {
-        // 只在1分钟后且状态为terminated或error时报错
+        // Only report errors after 1 minute and when status is terminated or error
         console.error("[SandboxProgress] Error state after timeout:", data.status);
         const current = getCurrentStage();
         if (current) {
           updateStageStatus(current.id, "error");
         }
 
-        // 显示具体错误原因
+        // Display specific error reason
         let errorMessage = "Sandbox creation failed";
         if (data.error) {
           errorMessage = `Sandbox creation failed: ${data.error}`;
@@ -196,7 +196,7 @@ export default function SandboxProgress({ projectId, onComplete, onError }: Sand
         return;
       }
 
-      // 1分钟内，显示友好的重试提示
+      // Within 1 minute, show friendly retry messages
       if (data.status === "error" || data.status === "terminated" || data.status === "not_created") {
         let message = "";
         if (data.status === "error") {
@@ -212,22 +212,22 @@ export default function SandboxProgress({ projectId, onComplete, onError }: Sand
         setRetryMessage(null);
       }
 
-      // 1分钟内或状态正常，继续轮询
+      // Within 1 minute or status is normal, continue polling
       if (elapsed < 30000) {
-        // 前30秒，显示正在重试
+        // First 30 seconds, show retrying state
         const current = getCurrentStage();
         if (current?.status === "pending") {
           updateStageStatus(current.id, "in_progress");
         }
       }
 
-      // 每5秒轮询一次
+      // Poll every 5 seconds
       setTimeout(checkSandboxProgress, 5000);
 
     } catch (error) {
       console.error("[SandboxProgress] Error checking sandbox progress:", error);
 
-      // 网络错误也遵循同样的规则：1分钟内不报错
+      // Network errors follow the same rule: don't report errors within 1 minute
       if (elapsed >= 60000) {
         const current = getCurrentStage();
         if (current) {
@@ -237,7 +237,7 @@ export default function SandboxProgress({ projectId, onComplete, onError }: Sand
         return;
       }
 
-      // 1分钟内，继续重试
+      // Within 1 minute, continue retrying
       if (currentStageIndex === 0 && stages[0].status === "pending") {
         updateStageStatus("database", "in_progress");
       }
