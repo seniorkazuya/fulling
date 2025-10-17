@@ -86,9 +86,37 @@ export default function SandboxProgress({ projectId, onComplete, onError }: Sand
 
     try {
       const response = await fetch(`/api/sandbox/${projectId}`);
+
+      // Check if response is ok before parsing
+      if (!response.ok) {
+        console.error(`[SandboxProgress] API returned ${response.status}: ${response.statusText}`);
+        // Treat as temporary error and retry
+        if (elapsed < 60000) {
+          setRetryMessage(`API error (${response.status}), retrying...`);
+          setTimeout(checkSandboxProgress, 5000);
+          return;
+        } else {
+          onError(`API error: ${response.status} ${response.statusText}`);
+          return;
+        }
+      }
+
       const data = await response.json();
 
-      console.log(`[SandboxProgress] Poll #${pollCount + 1}, Status: ${data.status}, Error: ${data.error}, Elapsed: ${Math.floor(elapsed/1000)}s`);
+      // Defensive check: ensure data is valid
+      if (!data || typeof data !== 'object') {
+        console.error("[SandboxProgress] Invalid API response:", data);
+        if (elapsed < 60000) {
+          setRetryMessage("Invalid response, retrying...");
+          setTimeout(checkSandboxProgress, 5000);
+          return;
+        } else {
+          onError("Invalid API response");
+          return;
+        }
+      }
+
+      console.log(`[SandboxProgress] Poll #${pollCount + 1}, Status: ${data.status}, Error: ${data.error || 'none'}, Elapsed: ${Math.floor(elapsed/1000)}s`);
       setPollCount(prev => prev + 1);
 
       // 简化的逻辑：30秒内不报错，1分钟后才在错误状态时报错
@@ -96,15 +124,20 @@ export default function SandboxProgress({ projectId, onComplete, onError }: Sand
 
       if (data.status === "running") {
         // 成功运行
+        console.log("[SandboxProgress] Sandbox is running!");
         stages.forEach((stage, index) => {
           updateStageStatus(stage.id, "completed");
         });
 
-        if (data.sandbox?.ttydUrl) {
+        // Defensive check: ensure sandbox object and ttydUrl exist
+        if (data.sandbox && data.sandbox.ttydUrl) {
+          console.log("[SandboxProgress] Terminal URL available, completing...");
           onComplete(data.sandbox.ttydUrl);
         } else {
+          console.warn("[SandboxProgress] Sandbox running but no ttydUrl, data:", data);
           // 即使没有URL，如果在1分钟内，继续重试
           if (elapsed < 60000) {
+            setRetryMessage("Terminal URL not yet available, retrying...");
             setTimeout(checkSandboxProgress, 5000);
           } else {
             onError("Sandbox is running but terminal URL is not available");
@@ -115,6 +148,7 @@ export default function SandboxProgress({ projectId, onComplete, onError }: Sand
 
       if (data.status === "creating") {
         // 正在创建中，更新进度条
+        console.log("[SandboxProgress] Sandbox is creating, updating progress...");
         const current = getCurrentStage();
         if (current?.status === "pending") {
           updateStageStatus(current.id, "in_progress");
@@ -142,6 +176,7 @@ export default function SandboxProgress({ projectId, onComplete, onError }: Sand
       // 处理错误状态
       if (shouldShowError) {
         // 只在1分钟后且状态为terminated或error时报错
+        console.error("[SandboxProgress] Error state after timeout:", data.status);
         const current = getCurrentStage();
         if (current) {
           updateStageStatus(current.id, "error");
@@ -171,6 +206,7 @@ export default function SandboxProgress({ projectId, onComplete, onError }: Sand
         } else if (data.status === "not_created") {
           message = "Waiting for resource creation to begin...";
         }
+        console.log(`[SandboxProgress] ${message} (status: ${data.status})`);
         setRetryMessage(message);
       } else {
         setRetryMessage(null);
@@ -189,7 +225,7 @@ export default function SandboxProgress({ projectId, onComplete, onError }: Sand
       setTimeout(checkSandboxProgress, 5000);
 
     } catch (error) {
-      console.error("Error checking sandbox progress:", error);
+      console.error("[SandboxProgress] Error checking sandbox progress:", error);
 
       // 网络错误也遵循同样的规则：1分钟内不报错
       if (elapsed >= 60000) {
@@ -206,6 +242,7 @@ export default function SandboxProgress({ projectId, onComplete, onError }: Sand
         updateStageStatus("database", "in_progress");
       }
 
+      setRetryMessage("Network error, retrying...");
       setTimeout(checkSandboxProgress, 5000);
     }
   };

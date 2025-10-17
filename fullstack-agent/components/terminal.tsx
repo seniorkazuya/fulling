@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Loader2, Play, RefreshCw } from "lucide-react";
@@ -21,18 +21,30 @@ export default function TerminalComponent({ projectId, sandboxUrl, startSandboxT
   const [showProgress, setShowProgress] = useState(false);
   const [isCreating, setIsCreating] = useState(false); // Prevent status reset during creation
 
+  // Use ref to track the latest value of isCreating to avoid closure issues in async functions
+  const isCreatingRef = useRef(false);
+
   // Check sandbox status
   const checkSandboxStatus = async (skipProgressReset = false) => {
     try {
+      console.log(`[Terminal] Checking sandbox status, isCreating ref: ${isCreatingRef.current}, skipProgressReset: ${skipProgressReset}`);
       const response = await fetch(`/api/sandbox/${projectId}`);
       const data = await response.json();
+
+      console.log(`[Terminal] Sandbox status response:`, data.status);
 
       if (data.sandbox?.ttydUrl) {
         if (data.status === "running") {
           setSandboxStatus("running");
           setTtydUrl(data.sandbox.ttydUrl);
-          // Only reset progress if not in creation process
-          if (!skipProgressReset && !isCreating) setShowProgress(false);
+          // Don't hide progress if we're currently showing it or in creation mode
+          // Use ref to get the latest value
+          if (!skipProgressReset && !isCreatingRef.current) {
+            console.log(`[Terminal] Setting showProgress to false (running state)`);
+            setShowProgress(false);
+          } else {
+            console.log(`[Terminal] NOT hiding progress: skipProgressReset=${skipProgressReset}, isCreating=${isCreatingRef.current}`);
+          }
         } else if (data.status === "creating") {
           setSandboxStatus("creating");
           // Always show progress when status is creating
@@ -40,20 +52,32 @@ export default function TerminalComponent({ projectId, sandboxUrl, startSandboxT
         } else {
           setSandboxStatus(data.status || "stopped");
           setTtydUrl(data.sandbox.ttydUrl);
-          // Only reset progress if not in creation process
-          if (!skipProgressReset && !isCreating) setShowProgress(false);
+          // Don't hide progress if we're in creation mode
+          // Use ref to get the latest value
+          if (!skipProgressReset && !isCreatingRef.current) {
+            console.log(`[Terminal] Setting showProgress to false (other status: ${data.status})`);
+            setShowProgress(false);
+          }
         }
       } else if (data.status === "not_created") {
         setSandboxStatus("not_created");
-        // Only reset progress if not in creation process
-        if (!skipProgressReset && !isCreating) setShowProgress(false);
+        // Don't hide progress if we're in creation mode
+        // Use ref to get the latest value
+        if (!skipProgressReset && !isCreatingRef.current) {
+          console.log(`[Terminal] Setting showProgress to false (not_created)`);
+          setShowProgress(false);
+        }
       } else {
         setSandboxStatus(data.status || "stopped");
-        // Only reset progress if not in creation process
-        if (!skipProgressReset && !isCreating) setShowProgress(false);
+        // Don't hide progress if we're in creation mode
+        // Use ref to get the latest value
+        if (!skipProgressReset && !isCreatingRef.current) {
+          console.log(`[Terminal] Setting showProgress to false (default case)`);
+          setShowProgress(false);
+        }
       }
     } catch (err) {
-      console.error("Error checking sandbox status:", err);
+      console.error("[Terminal] Error checking sandbox status:", err);
       setError("Failed to check sandbox status");
     }
   };
@@ -65,13 +89,17 @@ export default function TerminalComponent({ projectId, sandboxUrl, startSandboxT
 
     // Set creation lock to prevent status resets
     setIsCreating(true);
+    isCreatingRef.current = true; // Update ref synchronously
 
     // Immediately show progress UI for better user experience
     setShowProgress(true);
     setSandboxStatus("creating");
     setLoading(false);
 
+    console.log("[Terminal] Starting sandbox creation...");
+
     // Call API in background - don't await it
+    // The SandboxProgress component will handle all timeout and error logic
     fetch(`/api/sandbox/${projectId}`, {
       method: "POST",
       headers: {
@@ -84,30 +112,41 @@ export default function TerminalComponent({ projectId, sandboxUrl, startSandboxT
         if (response.ok) {
           if (data.status === "already_running") {
             // If already running, immediately transition to running state
+            console.log("[Terminal] Sandbox already running, transitioning to running state");
             setSandboxStatus("running");
             setTtydUrl(data.sandbox.ttydUrl);
             setShowProgress(false);
+            setIsCreating(false); // Release lock
+            isCreatingRef.current = false; // Update ref synchronously
           } else if (data.status === "created") {
             // Sandbox is being created, keep showing progress
-            console.log("Sandbox creation initiated:", data);
+            console.log("[Terminal] Sandbox creation initiated successfully");
             // Progress component is already showing, it will handle the rest
-            // Don't hide progress here!
+            // Don't hide progress here! Let SandboxProgress component handle completion
           } else {
             // Unknown success status, keep showing progress
-            console.log("Sandbox creation response:", data);
-            // Don't hide progress here!
+            console.log("[Terminal] Sandbox creation response:", data.status);
+            // Don't hide progress here! Let SandboxProgress component handle completion
           }
         } else {
-          // API returned error, but let the progress component handle it
-          // The progress component will retry and show appropriate messages
-          console.log("Sandbox creation API error:", data.error);
-          // Don't hide progress here! Let the progress component handle errors
+          // API returned error on initial request
+          console.error("[Terminal] Sandbox creation API error:", data.error);
+          // Only hide progress if the initial API call failed
+          // This means the creation never started
+          setError(data.error || "Failed to start sandbox creation");
+          setShowProgress(false);
+          setIsCreating(false);
+          isCreatingRef.current = false;
         }
       })
       .catch(err => {
-        // Network error, but let the progress component handle it
-        console.error("Error starting sandbox:", err);
-        // Don't hide progress here! Let the progress component handle network errors
+        // Network error on initial request
+        console.error("[Terminal] Network error starting sandbox:", err);
+        // Only hide progress if the initial API call failed
+        setError("Network error: Unable to start sandbox creation");
+        setShowProgress(false);
+        setIsCreating(false);
+        isCreatingRef.current = false;
       });
   };
 
@@ -118,6 +157,7 @@ export default function TerminalComponent({ projectId, sandboxUrl, startSandboxT
     setTtydUrl(ttydUrl);
     setShowProgress(false);
     setIsCreating(false); // Release creation lock
+    isCreatingRef.current = false; // Update ref synchronously
   };
 
   const handleProgressError = (error: string) => {
@@ -125,6 +165,7 @@ export default function TerminalComponent({ projectId, sandboxUrl, startSandboxT
     setSandboxStatus("error");
     setShowProgress(false);
     setIsCreating(false); // Release creation lock
+    isCreatingRef.current = false; // Update ref synchronously
   };
 
   // Trigger sandbox start when external trigger changes
@@ -134,12 +175,17 @@ export default function TerminalComponent({ projectId, sandboxUrl, startSandboxT
     }
   }, [startSandboxTrigger]);
 
+  // Sync isCreating state with ref to ensure they're always in sync
   useEffect(() => {
-    // Don't check status if we're already showing progress or in creation process
+    isCreatingRef.current = isCreating;
+  }, [isCreating]);
+
+  useEffect(() => {
+    // Only check initial status on mount if we're not already showing progress
     if (!showProgress && !isCreating) {
       checkSandboxStatus();
     }
-  }, [projectId]); // Remove showProgress from deps to avoid infinite loop
+  }, [projectId]);
 
   // Show progress component when showProgress is true
   if (showProgress) {
