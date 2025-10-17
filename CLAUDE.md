@@ -94,7 +94,7 @@ KUBECONFIG_PATH=./.secret/kubeconfig
 ## Development Principles
 
 ### Isolated Feature Modification
-在改一块功能的时候尽量不要影响别的正常功能，除非有依赖关系。
+When modifying a feature, try not to affect other normal features unless there are dependencies.
 
 1. Scope changes carefully
 2. Check dependencies

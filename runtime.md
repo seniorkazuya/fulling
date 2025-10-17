@@ -1,6 +1,6 @@
 ## Sandbox Docker Image Usage Method
 
-项目地址：https://github.com/FullstackAgent/fullstack-runtime-builder
+Project Repository: https://github.com/FullstackAgent/fullstack-runtime-builder
 
 # Full-Stack Web Application Runtime
 

@@ -1,10 +1,10 @@
-## 启动数据库的 yaml 示例
+## YAML Example for Starting Database
 
-可以通过参考 yaml 文件调用 kubernetes API 实现数据库创建，通过 `service` `secret` 等接口获取到数据库的内网地址和密码.
+You can refer to the YAML file to call the Kubernetes API to implement database creation, and get the internal address and password of the database through `service` `secret` and other interfaces.
 
-获取密码, 通过调用 kubernetes API, 获取里面的如 [project-name]-conn-credential 的 secret 里面的 password 字段, 是 base64 编码的，注意解析：
+To get the password, call the Kubernetes API to get the password field in the secret like [project-name]-conn-credential, which is base64 encoded, pay attention to parsing:
 
-获取示例：
+Example of getting it:
 ```
 root@(ns-ajno7yq7) ~$ kubectl get secret fullstackagent-conn-credential -oyaml
 apiVersion: v1

@@ -4,7 +4,7 @@ kind: Service
 metadata:
   name: FullstackSandbox-kcbnvqgwwqhb
   labels:
-    cloud.sealos.io/app-deploy-manager: FullstackSandbox # 这个 label 不能省略
+    cloud.sealos.io/app-deploy-manager: FullstackSandbox # This label cannot be omitted
 spec:
   ports:
     - port: 3000
