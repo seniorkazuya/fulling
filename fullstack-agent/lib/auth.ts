@@ -101,20 +101,18 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       }
       return token;
     },
-    async session({ session, token }) {
-      if (session.user) {
-        if (token.id) {
-          session.user.id = token.id as string;
-        }
-
-        // Get the actual user from database
+    async session({ session }) {
+      if (session.user && session.user.email) {
+        // Always lookup user by email to get the correct database ID
         const dbUser = await prisma.user.findUnique({
           where: {
-            id: session.user.id
+            email: session.user.email
           }
         });
 
         if (dbUser) {
+          // Set the correct database ID
+          session.user.id = dbUser.id;
           session.user.githubToken = dbUser.githubToken || undefined;
         }
       }
