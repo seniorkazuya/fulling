@@ -1,5 +1,5 @@
-# 请对本模块重要功能编写测试用例并测试
+# Please write test cases for important functions of this module and test them
 
-1. Sandbox Runtime pod 可以正常创建，并测试 ttyd 的域名可访问
-2. 数据可以正常创建并获取到正确的数据库访问信息
-3. 测试完成后清理测试数据
+1. Sandbox Runtime pod can be created normally, and test that ttyd domain is accessible
+2. Data can be created normally and get correct database access information
+3. Clean up test data after testing completion

@@ -1,5 +1,5 @@
-# Database 和 sandbox 创建规则
+# Database and Sandbox Creation Rules
 
-注意，调用 K8s 接口创建 deployment service ingress 等对象时，时严格参考本目录下面的 yaml 文件，不能省略里面的重要信息，比如 label 信息和其它字段，除了一些必要字段有变化之外其他通用内容都需要保留。
+Note: When calling K8s interface to create deployment service ingress and other objects, strictly reference the YAML files in this directory. Do not omit important information inside, such as label information and other fields. Except for some necessary fields that have changed, other general content needs to be retained.
 
-所有资源要有命名规则，如 [project-name]-agentruntime-[6位随机数]
+All resources should have naming rules, such as [project-name]-agentruntime-[6-digit-random-number]

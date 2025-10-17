@@ -1,4 +1,4 @@
-## 沙箱 Docker 镜像使用方式
+## Sandbox Docker Image Usage Method
 
 项目地址：https://github.com/FullstackAgent/fullstack-runtime-builder
 
