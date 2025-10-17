@@ -5,7 +5,7 @@
 
 const VERSIONS = {
   // Runtime container image version
-  RUNTIME_IMAGE: 'fullstackagent/fullstack-web-runtime:v0.0.1-alpha.6',
+  RUNTIME_IMAGE: 'fullstackagent/fullstack-web-runtime:v0.0.1-alpha.7',
 } as const;
 
 /**
