@@ -1,73 +1,73 @@
-# 沙箱创建故障排除指南
+# Sandbox Creation Troubleshooting Guide
 
-## 如果仍然看到 "Sandbox creation failed"
+## If you still see "Sandbox creation failed"
 
-### 🔄 **快速解决方案**
+### 🔄 **Quick Solutions**
 
-1. **刷新浏览器缓存**
+1. **Refresh browser cache**
    ```
-   - 按 Ctrl+F5 (Windows) 或 Cmd+Shift+R (Mac) 强制刷新
-   - 或者使用浏览器的开发者工具清除缓存
-   ```
-
-2. **重新登录**
-   ```
-   - 注销当前账户
-   - 重新通过 GitHub OAuth 登录
+   - Press Ctrl+F5 (Windows) or Cmd+Shift+R (Mac) to force refresh
+   - Or use browser developer tools to clear cache
    ```
 
-3. **等待更长时间**
+2. **Re-login**
    ```
-   - 数据库创建可能需要 2-3 分钟
-   - 如果看到进度条，请耐心等待完成
+   - Log out of current account
+   - Re-login through GitHub OAuth
    ```
 
-### 🛠️ **已修复的问题**
+3. **Wait longer**
+   ```
+   - Database creation may take 2-3 minutes
+   - If you see progress bar, please wait patiently for completion
+   ```
 
-✅ **数据库凭据检索失败**
-- **之前**: `Failed to get database secret: Error: No database cluster found`
-- **现在**: 自动创建数据库或使用现有数据库
+### 🛠️ **Fixed Issues**
 
-✅ **时序竞争条件**
-- **之前**: 沙箱创建在数据库准备就绪之前就开始
-- **现在**: 等待数据库完全就绪后再创建沙箱
+✅ **Database credential retrieval failed**
+- **Before**: `Failed to get database secret: Error: No database cluster found`
+- **Now**: Automatically create database or use existing database
 
-✅ **错误处理不完善**
-- **之前**: 模糊的错误信息
-- **现在**: 详细的进度指示和清晰的错误信息
+✅ **Timing race condition**
+- **Before**: Sandbox creation started before database was ready
+- **Now**: Wait for database to be fully ready before creating sandbox
 
-### 📊 **当前系统状态**
+✅ **Incomplete error handling**
+- **Before**: Vague error messages
+- **Now**: Detailed progress indication and clear error messages
 
-**运行中的数据库集群:**
-- `aaa-agentruntime-cram74` ✅ 运行中
-- `bbb-agentruntime-iynj16` ✅ 运行中
-- `ccc-agentruntime-53qn4j` ✅ 运行中
-- `fullstackagent` ✅ 运行中
-- `bazi` ✅ 运行中
+### 📊 **Current System Status**
 
-**系统改进:**
-- ✅ 数据库创建等待集群就绪
-- ✅ 实际凭据检索而非默认值
-- ✅ 沙箱创建接受数据库凭据参数
-- ✅ API 路由消除时序竞争条件
-- ✅ 向后兼容现有项目
+**Running Database Clusters:**
+- `aaa-agentruntime-cram74` ✅ Running
+- `bbb-agentruntime-iynj16` ✅ Running
+- `ccc-agentruntime-53qn4j` ✅ Running
+- `fullstackagent` ✅ Running
+- `bazi` ✅ Running
 
-### 🔍 **如果问题持续存在**
+**System Improvements:**
+- ✅ Database creation waits for cluster readiness
+- ✅ Actual credential retrieval instead of defaults
+- ✅ Sandbox creation accepts database credential parameters
+- ✅ API route eliminates timing race conditions
+- ✅ Backward compatible with existing projects
 
-如果在尝试上述解决方案后仍然遇到问题，请检查：
+### 🔍 **If Issues Persist**
 
-1. **项目名称**: 确保项目名称只包含字母数字字符和连字符
-2. **网络连接**: 确保稳定的互联网连接
-3. **浏览器控制台**: 打开开发者工具查看任何 JavaScript 错误
+If you still encounter problems after trying the above solutions, please check:
 
-### 📞 **获取帮助**
+1. **Project Name**: Ensure project name contains only alphanumeric characters and hyphens
+2. **Network Connection**: Ensure stable internet connection
+3. **Browser Console**: Open developer tools to check for any JavaScript errors
 
-如果问题仍然存在，请提供以下信息：
-- 项目名称
-- 确切的错误信息
-- 浏览器控制台中的任何错误日志
-- 尝试创建沙箱的时间戳
+### 📞 **Getting Help**
+
+If problems still exist, please provide the following information:
+- Project name
+- Exact error message
+- Any error logs in browser console
+- Timestamp when you tried to create sandbox
 
 ---
 
-**技术说明**: 此修复解决了 Kubernetes 数据库集成中的根本时序问题，使沙箱创建过程更加可靠和用户友好。
+**Technical Note**: This fix resolves the fundamental timing issue in Kubernetes database integration, making the sandbox creation process more reliable and user-friendly.

@@ -327,5 +327,5 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ---
 
 <div align="center">
-100% AI-generated code. Prompted by fanux. Thanks for Cluade code & opus & sonnet 4.5 & GLM 
+100% AI-generated code. Prompted by fanux. Thanks for Claude code & Opus & Sonnet 4.5 & GLM 
 </div>
