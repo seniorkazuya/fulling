@@ -144,8 +144,9 @@ RUN wget -O /tmp/ttyd https://github.com/tsl0922/ttyd/releases/latest/download/t
 # Create working directory
 WORKDIR /workspace
 
-# Copy entrypoint script
+# Copy entrypoint script and bash configuration
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
+COPY .bashrc /root/.bashrc
 RUN chmod +x /usr/local/bin/entrypoint.sh
 
 # Expose common ports for web development

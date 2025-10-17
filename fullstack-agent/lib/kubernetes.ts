@@ -329,6 +329,8 @@ export class KubernetesService {
       TTYD_INTERFACE: '0.0.0.0',
       // No TTYD_BASE_PATH, no TTYD_WS_PATH - let ttyd use defaults
       // These were causing issues with WebSocket connections
+      // Pass project name for custom terminal prompt
+      PROJECT_NAME: projectName,
     };
 
     // 1. Create Deployment with Sealos-compliant configuration
