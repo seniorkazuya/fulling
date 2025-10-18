@@ -57,7 +57,7 @@ Key models in `/prisma/schema.prisma`:
 - **Kubeconfig**: `.secret/kubeconfig` (MUST use existing config)
 - **Namespace**: `ns-ajno7yq7` (from kubeconfig)
 - **API Server**: `https://usw.sealos.io:6443`
-- **Sandbox Image**: `fullstackagent/fullstack-web-runtime:v0.0.1-alpha.7`
+- **Sandbox Image**: `fullstackagent/fullstack-web-runtime:v0.0.1-alpha.8`
 
 **Critical Rules:**
 - NEVER use localhost:8080 for Kubernetes API calls
