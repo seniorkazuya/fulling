@@ -1,2 +1,2 @@
 #!/bin/bash
-ttyd -W claude
+ttyd -W bash

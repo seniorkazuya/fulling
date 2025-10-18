@@ -14,3 +14,11 @@ _path() {
 
 # Update prompt on every command
 PROMPT_COMMAND='PS1="\u@${PROJECT_NAME}:$(_path)\$ "'
+
+# Auto-start Claude Code CLI when terminal opens
+# Only runs in the initial shell, not in subshells
+if [ -z "$CLAUDE_AUTO_STARTED" ]; then
+    export CLAUDE_AUTO_STARTED=1
+    echo "🤖 Starting Claude Code CLI..."
+    claude
+fi
