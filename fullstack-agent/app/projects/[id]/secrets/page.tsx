@@ -3,6 +3,8 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { notFound } from "next/navigation";
 import { Key, Lock, Shield, Eye, EyeOff, Plus, Trash2, Copy, Check } from "lucide-react";
+import { readSystemEnv } from "@/lib/system-env";
+import { SystemSecretsList } from "@/components/secrets-list";
 
 export default async function SecretsConfigurationPage({
   params,
@@ -35,6 +37,9 @@ export default async function SecretsConfigurationPage({
     notFound();
   }
 
+  // Read system-wide environment variables
+  const systemSecrets = readSystemEnv();
+
   return (
     <div className="h-full flex flex-col bg-[#1e1e1e]">
       {/* Header */}
@@ -53,13 +58,18 @@ export default async function SecretsConfigurationPage({
       {/* Content */}
       <div className="flex-1 overflow-y-auto p-6">
         <div className="max-w-4xl space-y-6">
-          {/* Secrets List */}
+          {/* Project Secrets */}
           <div className="bg-[#252526] rounded-lg border border-[#3e3e42] p-6">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-medium text-white flex items-center gap-2">
-                <Lock className="h-5 w-5" />
-                Secrets
-              </h2>
+              <div>
+                <h2 className="text-lg font-medium text-white flex items-center gap-2">
+                  <Lock className="h-5 w-5 text-yellow-400" />
+                  Project Secrets
+                </h2>
+                <p className="text-xs text-gray-400 mt-1">
+                  Project-specific secrets (can be edited)
+                </p>
+              </div>
               <button className="px-3 py-1.5 bg-[#0e639c] hover:bg-[#1177bb] text-white text-sm rounded flex items-center gap-1.5 transition-colors">
                 <Plus className="h-4 w-4" />
                 Add Secret
@@ -104,6 +114,9 @@ export default async function SecretsConfigurationPage({
               </div>
             )}
           </div>
+
+          {/* System Secrets (Claude Code) */}
+          <SystemSecretsList systemSecrets={systemSecrets} />
 
           {/* Security Best Practices */}
           <div className="bg-[#252526] rounded-lg border border-[#3e3e42] p-6">

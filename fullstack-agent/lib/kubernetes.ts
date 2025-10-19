@@ -281,10 +281,15 @@ export class KubernetesService {
     const ttydDomain = this.generateRandomName();
 
     // Load Claude Code environment variables from .secret/.env
-    const claudeEnvPath = path.join(process.cwd(), '.secret', '.env');
+    // Check both current directory and parent directory (same as kubeconfig loading)
+    let claudeEnvPath = path.join(process.cwd(), '.secret', '.env');
+    if (!fs.existsSync(claudeEnvPath)) {
+      claudeEnvPath = path.join(process.cwd(), '..', '.secret', '.env');
+    }
     let claudeEnvVars: Record<string, string> = {};
 
     if (fs.existsSync(claudeEnvPath)) {
+      console.log(`Loading Claude Code env from: ${claudeEnvPath}`);
       const envContent = fs.readFileSync(claudeEnvPath, 'utf-8');
       envContent.split('\n').forEach(line => {
         // Skip comment lines and export statements
