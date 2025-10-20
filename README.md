@@ -17,13 +17,41 @@ FullStack Agent is an innovative AI-powered platform that enables users to creat
 
 ### ✨ Key Features
 
-- **🤖 AI-Powered Development**: Leverage Claude Code to build applications using natural language
-- **🔒 Isolated Sandboxes**: Each project runs in its own Kubernetes-managed container environment
-- **🗄️ Automatic Database Provisioning**: PostgreSQL databases created on-demand using KubeBlocks
-- **🌐 Web-Based Terminal**: Integrated ttyd terminal for direct environment access
-- **🔐 GitHub Integration**: Seamless code repository management and version control
-- **⚡ Real-time Progress Tracking**: Visual feedback during sandbox creation and deployment
-- **🎨 Modern UI**: Built with Next.js 15, Tailwind CSS v4, and Shadcn/UI components
+Here is a feature breakdown of the FullstackAgent project, translated into English and presented as distinct items.
+
+***
+
+## Key Features of the FullstackAgent Environment
+
+The FullstackAgent project is designed to streamline the entire full-stack development lifecycle using an AI-centric approach. Its core capabilities are delivered through a highly orchestrated, self-contained development sandbox:
+
+* **Pre-Configured AI Development Environment:**
+    * A complete, immediately usable development environment is provisioned, featuring **Next.js**, **shadcn/ui**, and the **Claude Code CLI**.
+    * Essential AI-related environment variables (e.g., `BASE_URL`, `KEY`, etc.) are automatically configured and injected, allowing the AI agent to begin coding instantly without manual setup.
+
+* **Isolated PostgreSQL Database Provisioning:**
+    * A dedicated and isolated **PostgreSQL** database instance is automatically created for each project using **KubeBlocks**.
+    * The database connection string is securely injected into the development environment as an environment variable (`DATABASE_URL`), ensuring the AI can access and configure the persistence layer.
+
+* **Automated Public Endpoint and Domain Mapping:**
+    * Multiple accessible subdomains are automatically allocated and managed (**HTTPS ingress with SSL termination**).
+    * These subdomains are configured to map to the specific application ports you wish to expose (e.g., ports 3000, 5000, 8080), providing immediate external access for testing and live development.
+
+* **Natural Language Interaction via Web Terminal:**
+    * All core development and configuration tasks are performed through a built-in **Web Terminal (ttyd)** using natural language instructions.
+    * This provides a direct, low-friction interface for interacting with the AI engineer, receiving code, running commands, and monitoring the development process.
+
+* **AI-Aware Business Configuration:**
+    * Specific business configurations, such as **OAuth settings** (e.g., GitHub authentication) and **Payment configurations**, can be fed into the platform.
+    * This configuration metadata is made accessible as contextual prompts, allowing the Claude Code agent to intelligently perceive and implement corresponding features (e.g., configuring NextAuth) directly into the generated code.
+
+* **Seamless GitHub Repository Integration:**
+    * The platform is designed for easy association with an external **GitHub repository**.
+    * This facilitates standard code repository management, version control, and collaboration by connecting the AI's generated code to your preferred source control workflow.
+
+* **Automated High-Availability Deployment:**
+    * Projects can be automatically deployed from the development sandbox to a high-availability production environment, leveraging the underlying **Kubernetes** infrastructure.
+    * This aims to abstract away the complexities of deployment, allowing the AI to manage the transition from development to live application.
 
 ## 🛠️ Technology Stack
 
@@ -117,23 +145,21 @@ Open [http://localhost:3000](http://localhost:3000) to access the application.
 ### System Architecture
 
 ```
-┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
-│                 │     │                 │     │                 │
-│   Web Browser   │────▶│   Next.js App   │────▶│   Kubernetes    │
-│                 │     │                 │     │     Cluster     │
-└─────────────────┘     └─────────────────┘     └─────────────────┘
+┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐  
+│                 │     │                 │     │                 │     │  Sandbox Pods   │  
+│   Web Browser   │────▶│ FullstackAgent  │────▶│   Kubernetes    │────▶│  (with Claude)  │  
+│                 │     │                 │     │     Cluster     │     └─────────────────┘
+└─────────────────┘     └─────────────────┘     └─────────────────┘           
                                │                         │
                                │                         ▼
                                │                 ┌─────────────────┐
                                │                 │   PostgreSQL    │
-                               │                 │   (KubeBlocks)  │
                                │                 └─────────────────┘
-                               │                         │
-                               ▼                         ▼
-                        ┌─────────────────┐     ┌─────────────────┐
-                        │     GitHub      │     │  Sandbox Pods   │
-                        │  Repositories   │     │  (with Claude)  │
-                        └─────────────────┘     └─────────────────┘
+                               ▼                         
+                        ┌─────────────────┐     
+                        │     GitHub      │     
+                        │  Repositories   │     
+                        └─────────────────┘     
 ```
 
 ### Database Schema
@@ -316,12 +342,11 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 - [Anthropic](https://www.anthropic.com/) for Claude Code
 - [Sealos](https://sealos.io/) for Kubernetes platform
-- [KubeBlocks](https://kubeblocks.io/) for database management
 - [ttyd](https://github.com/tsl0922/ttyd) for web terminal
 
 ## 📞 Contact
 
-- GitHub: [@FullstackAgent](https://github.com/FullstackAgent)
+- GitHub: [@fanux](https://github.com/fanux)
 - Issues: [GitHub Issues](https://github.com/FullstackAgent/FullstackAgent/issues)
 
 ---
