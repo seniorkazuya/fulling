@@ -10,7 +10,13 @@
 
 ## 🚀 Overview
 
-FullStack Agent is an innovative AI-powered platform that enables users to create, develop, and deploy full-stack web applications through natural language interaction. Built on top of Claude Code CLI and Kubernetes, it provides isolated sandbox environments for secure and scalable application development.
+You only need to create a sandbox, and then you can start coding with Claude Code; FullstackAgent has already taken care of everything else for you.
+
+This includes: 
+* Creating a Next.js and shadcn/ui coding environment.
+* Creating a PostgreSQL database, configuring the database connection information environment variable.
+* Configuring all necessary Claude Code environment variables
+* And creating an accessible domain name.
 
 <img width="1511" height="775" alt="image" src="https://github.com/user-attachments/assets/4683a22c-800b-45b7-91a3-6ed5114ea3c9" />
 
