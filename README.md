@@ -14,6 +14,9 @@ FullStack Agent is an innovative AI-powered platform that enables users to creat
 
 <img width="1511" height="775" alt="image" src="https://github.com/user-attachments/assets/4683a22c-800b-45b7-91a3-6ed5114ea3c9" />
 
+<img width="1200" height="768" alt="image" src="https://github.com/user-attachments/assets/45aca3d0-f722-401c-9d63-9ca14957d338" />
+
+
 ### ✨ Key Features
 
 The FullstackAgent project is designed to streamline the entire full-stack development lifecycle using an AI-centric approach. Its core capabilities are delivered through a highly orchestrated, self-contained development sandbox:
