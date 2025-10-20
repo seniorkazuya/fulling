@@ -15,10 +15,12 @@ _path() {
 # Update prompt on every command
 PROMPT_COMMAND='PS1="\u@${PROJECT_NAME}:$(_path)\$ "'
 
-# Auto-start Claude Code CLI when terminal opens
-# Only runs in the initial shell, not in subshells
-if [ -z "$CLAUDE_AUTO_STARTED" ]; then
-    export CLAUDE_AUTO_STARTED=1
+# Auto-start Claude Code CLI on first terminal connection only
+# Use a file flag that persists across ttyd reconnections
+CLAUDE_FLAG_FILE="/tmp/.claude_started"
+
+if [ ! -f "$CLAUDE_FLAG_FILE" ]; then
+    touch "$CLAUDE_FLAG_FILE"
     echo "🤖 Starting Claude Code CLI..."
     claude
 fi
