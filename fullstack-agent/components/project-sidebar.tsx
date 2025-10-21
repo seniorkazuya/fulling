@@ -175,7 +175,8 @@ export default function ProjectSidebar({
             )}
           </Tooltip>
         </div>
-      </TooltipProvider>
+
+        </TooltipProvider>
     </div>
   );
 }

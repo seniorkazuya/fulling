@@ -45,20 +45,18 @@ export default async function SettingsPage() {
   });
 
   return (
-    <div className="min-h-screen bg-[#1e1e1e] text-white">
-      <div className="container mx-auto py-6 px-4 max-w-4xl">
-        <div className="mb-6">
-          <div className="flex items-center gap-3 mb-2">
-            <Settings className="h-6 w-6" />
-            <h1 className="text-2xl font-semibold">Settings</h1>
-          </div>
-          <p className="text-sm text-gray-400">
-            Configure your development environment and system preferences
-          </p>
+    <div className="container mx-auto py-6 px-4 max-w-4xl">
+      <div className="mb-6">
+        <div className="flex items-center gap-3 mb-2">
+          <Settings className="h-6 w-6" />
+          <h1 className="text-2xl font-semibold">Settings</h1>
         </div>
-
-        <SettingsClient user={user} projects={projects} />
+        <p className="text-sm text-gray-400">
+          Configure your development environment and system preferences
+        </p>
       </div>
+
+      <SettingsClient user={user} projects={projects} />
     </div>
   );
 }
