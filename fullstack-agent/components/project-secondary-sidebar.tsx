@@ -12,7 +12,6 @@ import {
   Key,
   Shield,
   CreditCard,
-  Rocket,
   Github,
   Package,
   Terminal,
@@ -56,7 +55,7 @@ export default function ProjectSecondarySidebar({
 
   const topSections = [
     { id: "terminal", label: "Web Terminal", icon: Terminal, href: `/projects/${project.id}/terminal` },
-    { id: "database", label: "Database Connection", icon: Database, href: `/projects/${project.id}/database` },
+    { id: "database", label: "Database", icon: Database, href: `/projects/${project.id}/database` },
   ];
 
   const configSections = [
@@ -67,7 +66,6 @@ export default function ProjectSecondarySidebar({
   ];
 
   const bottomSections = [
-    { id: "deploy", label: "Deploy to Production", icon: Rocket, href: `/projects/${project.id}/deploy` },
     { id: "github", label: "GitHub Repository", icon: Github, href: `/projects/${project.id}/github` },
   ];
 
@@ -85,7 +83,7 @@ export default function ProjectSecondarySidebar({
       <div className="h-12 flex items-center justify-between px-3 border-b border-[#3e3e42]">
         {!isCollapsed && (
           <span className="text-sm font-medium text-gray-300">
-            Project Configuration
+            Project {project.name}
           </span>
         )}
         <button
