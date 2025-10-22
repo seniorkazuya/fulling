@@ -1,7 +1,3 @@
-## Sandbox Docker Image Usage Method
-
-Project Repository: https://github.com/FullstackAgent/fullstack-runtime-builder
-
 # Full-Stack Web Application Runtime
 
 A comprehensive Docker container image designed for full-stack web development with all the modern tools and frameworks pre-installed.
@@ -116,28 +112,28 @@ The runtime supports the following environment variables:
 
 ### Core Configuration
 
-| Variable | Description | Default | Required |
-|----------|-------------|---------|----------|
-| `ANTHROPIC_BASE_URL` | Base URL for Anthropic API | - | No |
-| `ANTHROPIC_AUTH_TOKEN` | Authentication token for Anthropic API | - | No |
-| `ANTHROPIC_MODEL` | Primary AI model to use | - | No |
-| `ANTHROPIC_SMALL_FAST_MODEL` | Fast model for quick operations | - | No |
-| `DOCKER_HUB_NAME` | Docker Hub username for pushing images | - | For pushing |
-| `DOCKER_HUB_PASSWD` | Docker Hub password for pushing images | - | For pushing |
+| Variable                     | Description                            | Default | Required    |
+| ---------------------------- | -------------------------------------- | ------- | ----------- |
+| `ANTHROPIC_BASE_URL`         | Base URL for Anthropic API             | -       | No          |
+| `ANTHROPIC_AUTH_TOKEN`       | Authentication token for Anthropic API | -       | No          |
+| `ANTHROPIC_MODEL`            | Primary AI model to use                | -       | No          |
+| `ANTHROPIC_SMALL_FAST_MODEL` | Fast model for quick operations        | -       | No          |
+| `DOCKER_HUB_NAME`            | Docker Hub username for pushing images | -       | For pushing |
+| `DOCKER_HUB_PASSWD`          | Docker Hub password for pushing images | -       | For pushing |
 
 ### ttyd Web Terminal Configuration
 
-| Variable | Description | Default | Required |
-|----------|-------------|---------|----------|
-| `TTYD_PORT` | Port for web terminal access | 7681 | No |
-| `TTYD_USERNAME` | Username for authentication | - | No |
-| `TTYD_PASSWORD` | Password for authentication | - | No |
-| `TTYD_INTERFACE` | Network interface to bind | 0.0.0.0 | No |
-| `TTYD_BASE_PATH` | Base URL path for ttyd | / | No |
-| `TTYD_MAX_CLIENTS` | Maximum concurrent clients (0=unlimited) | 0 | No |
-| `TTYD_READONLY` | Enable read-only mode | false | No |
-| `TTYD_ALLOW_ORIGIN` | CORS allow origin header | * | No |
-| `DISABLE_TTYD` | Disable ttyd completely | false | No |
+| Variable            | Description                              | Default | Required |
+| ------------------- | ---------------------------------------- | ------- | -------- |
+| `TTYD_PORT`         | Port for web terminal access             | 7681    | No       |
+| `TTYD_USERNAME`     | Username for authentication              | -       | No       |
+| `TTYD_PASSWORD`     | Password for authentication              | -       | No       |
+| `TTYD_INTERFACE`    | Network interface to bind                | 0.0.0.0 | No       |
+| `TTYD_BASE_PATH`    | Base URL path for ttyd                   | /       | No       |
+| `TTYD_MAX_CLIENTS`  | Maximum concurrent clients (0=unlimited) | 0       | No       |
+| `TTYD_READONLY`     | Enable read-only mode                    | false   | No       |
+| `TTYD_ALLOW_ORIGIN` | CORS allow origin header                 | \*      | No       |
+| `DISABLE_TTYD`      | Disable ttyd completely                  | false   | No       |
 
 ### Setting Environment Variables
 
@@ -164,6 +160,7 @@ docker run -it --rm \
 ## Web Terminal Access (ttyd)
 
 The runtime includes ttyd, providing secure web-based terminal access. This is particularly useful for:
+
 - Remote development environments
 - Cloud-based IDEs
 - Product demonstrations
@@ -284,6 +281,7 @@ Recommended volume mounts:
 ## Installed Tools
 
 ### Core Development Tools
+
 - Node.js v22.x with npm and yarn
 - TypeScript
 - Git with GitHub CLI
@@ -291,30 +289,36 @@ Recommended volume mounts:
 - Make, gcc, build-essential
 
 ### Web Frameworks
+
 - Next.js (latest)
 - Create Next App
 - Vercel CLI
 - Prisma ORM
 
 ### UI/Styling
+
 - shadcn/ui CLI
 - Tailwind CSS
 - PostCSS
 - Autoprefixer
 
 ### Database Tools
+
 - PostgreSQL Client v16
 - Prisma CLI
 
 ### Container Tools
+
 - Buildah (rootless container builds)
 - Podman
 - Skopeo
 
 ### Web Terminal
+
 - ttyd (web-based terminal with authentication support)
 
 ### Utilities
+
 - ripgrep (fast search)
 - fd-find (fast file finder)
 - bat (better cat)
@@ -380,6 +384,7 @@ This runtime is provided as-is for development purposes. Please ensure complianc
 ## Support
 
 For issues or questions:
+
 - Open an issue in the repository
 - Check the Dockerfile for specific version information
 - Consult the documentation of individual tools included in the runtime
