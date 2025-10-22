@@ -3,8 +3,21 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, Folder, ExternalLink, Circle, Clock, GitBranch } from "lucide-react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Plus,
+  Folder,
+  ExternalLink,
+  Circle,
+  Clock,
+  GitBranch,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export default async function ProjectsPage() {
@@ -19,14 +32,16 @@ export default async function ProjectsPage() {
     where: { email: session.user.email },
   });
 
-  const projects = user ? await prisma.project.findMany({
-    where: {
-      userId: user.id,
-    },
-    orderBy: {
-      updatedAt: "desc",
-    },
-  }) : [];
+  const projects = user
+    ? await prisma.project.findMany({
+        where: {
+          userId: user.id,
+        },
+        orderBy: {
+          updatedAt: "desc",
+        },
+      })
+    : [];
 
   return (
     <div className="min-h-screen bg-[#1e1e1e] text-white">
@@ -34,7 +49,9 @@ export default async function ProjectsPage() {
         <div className="flex justify-between items-center mb-6">
           <div>
             <h1 className="text-2xl font-semibold">Projects</h1>
-            <p className="text-sm text-gray-400 mt-1">Manage your AI-powered applications</p>
+            <p className="text-sm text-gray-400 mt-1">
+              Manage your AI-powered applications
+            </p>
           </div>
           <Link href="/projects/new">
             <Button className="bg-[#0e639c] hover:bg-[#1177bb] text-white">
@@ -48,8 +65,12 @@ export default async function ProjectsPage() {
           <Card className="bg-[#252526] border-[#3e3e42]">
             <CardContent className="flex flex-col items-center justify-center py-12">
               <Folder className="h-12 w-12 text-gray-500 mb-3" />
-              <h2 className="text-lg font-medium text-white mb-1">No projects yet</h2>
-              <p className="text-sm text-gray-400 mb-5">Create your first AI-powered application</p>
+              <h2 className="text-lg font-medium text-white mb-1">
+                No projects yet
+              </h2>
+              <p className="text-sm text-gray-400 mb-5">
+                Create your first AI-powered application
+              </p>
               <Link href="/projects/new">
                 <Button className="bg-[#0e639c] hover:bg-[#1177bb] text-white">
                   <Plus className="mr-2 h-4 w-4" />
@@ -85,14 +106,17 @@ export default async function ProjectsPage() {
                       <div className="flex items-center gap-1 text-xs text-gray-500">
                         <Clock className="h-3 w-3" />
                         <span>
-                          {new Date(project.updatedAt).toLocaleDateString('en-US', {
-                            month: 'short',
-                            day: 'numeric',
-                          })}
+                          {new Date(project.updatedAt).toLocaleDateString(
+                            "en-US",
+                            {
+                              month: "short",
+                              day: "numeric",
+                            }
+                          )}
                         </span>
                       </div>
                       <div className="flex items-center gap-2">
-                        {project.githubRepo && (
+                        {/* {project.githubRepo && ( // causing issue with ssr
                           <a
                             href={`https://github.com/${project.githubRepo}`}
                             target="_blank"
@@ -107,7 +131,7 @@ export default async function ProjectsPage() {
                               <ExternalLink className="h-3 w-3" />
                             </Button>
                           </a>
-                        )}
+                        )} */}
                       </div>
                     </div>
                   </CardContent>
@@ -130,7 +154,10 @@ function StatusIndicator({ status }: { status: string }) {
         <Circle className={cn("h-2 w-2", color)} fill="currentColor" />
         {(status === "INITIALIZING" || status === "DEPLOYING") && (
           <Circle
-            className={cn("h-2 w-2 absolute top-0 left-0 animate-ping", pulseColor)}
+            className={cn(
+              "h-2 w-2 absolute top-0 left-0 animate-ping",
+              pulseColor
+            )}
             fill="currentColor"
           />
         )}
@@ -147,31 +174,31 @@ function getStatusInfo(status: string) {
       return {
         color: "text-green-500",
         pulseColor: "",
-        label: "Ready"
+        label: "Ready",
       };
     case "INITIALIZING":
       return {
         color: "text-yellow-500",
         pulseColor: "text-yellow-500 opacity-75",
-        label: "Initializing"
+        label: "Initializing",
       };
     case "DEPLOYING":
       return {
         color: "text-yellow-500",
         pulseColor: "text-yellow-500 opacity-75",
-        label: "Deploying"
+        label: "Deploying",
       };
     case "ERROR":
       return {
         color: "text-red-500",
         pulseColor: "",
-        label: "Error"
+        label: "Error",
       };
     default:
       return {
         color: "text-gray-500",
         pulseColor: "",
-        label: "Stopped"
+        label: "Stopped",
       };
   }
 }

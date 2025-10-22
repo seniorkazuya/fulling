@@ -25,6 +25,7 @@ npx prisma db push   # Push schema changes to database
 ## Project Architecture
 
 ### Directory Structure
+
 ```
 /fullstack-agent/
   ├── /app/          # Next.js App Router pages and API routes
@@ -36,13 +37,16 @@ npx prisma db push   # Push schema changes to database
 ```
 
 ### Key Services
+
 - **KubernetesService** (`/lib/kubernetes.ts`): Manages K8s resources, PostgreSQL via KubeBlocks, sandbox deployments
 - **Authentication** (`/lib/auth.ts`): GitHub OAuth, session management
 - **Database** (`/lib/db.ts`): Prisma client configuration
 - **GitHub Integration** (`/lib/github.ts`): Repository management and commits
 
 ### Database Schema
+
 Key models in `/prisma/schema.prisma`:
+
 - **User**: GitHub-authenticated users (`id`, `email`, `githubId`, `githubToken`)
 - **Project**: User projects (`id`, `name`, `status`, `githubRepo`, `databaseUrl`)
 - **Environment**: Environment variables (`key`, `value`, `category`, `isSecret`)
@@ -51,21 +55,26 @@ Key models in `/prisma/schema.prisma`:
 ## Critical Implementation Details
 
 ### Kubernetes Integration
+
 ⚠️ **IMPORTANT**: Cluster is already provisioned. DO NOT create new cluster.
 
 **Configuration:**
+
 - **Kubeconfig**: `.secret/kubeconfig` (MUST use existing config)
 - **Namespace**: `ns-ajno7yq7` (from kubeconfig)
 - **API Server**: `https://usw.sealos.io:6443`
 - **Sandbox Image**: `fullstackagent/fullstack-web-runtime:v0.0.1-alpha.9`
 
 **Critical Rules:**
+
 - NEVER use localhost:8080 for Kubernetes API calls
 - ALWAYS follow YAML templates in `/yaml` directory
 - Required labels: `cloud.sealos.io/app-deploy-manager`, `app.kubernetes.io/instance`, `app.kubernetes.io/managed-by`
 
 ### Environment Configuration
-**Main Application** (`.env.local`):
+
+**Main Application** (`.env`):
+
 ```env
 DATABASE_URL=postgresql://...
 GITHUB_CLIENT_ID=...
@@ -76,17 +85,20 @@ KUBECONFIG_PATH=./.secret/kubeconfig
 ```
 
 ### Sandbox Deployment Process
-1. Database Creation via kubernetes
+
+1. Database Creation via KubeBlocks Cluster
 2. Deploy fullstack-web-runtime pod
 3. Setup Service and Ingress
 4. Initialize ttyd service
 5. Return public URLs
 
 **Generated URLs:**
+
 - App: `https://sandbox-{projectId}.dgkwlntjskms.usw.sealos.io`
 - Terminal: `https://sandbox-{projectId}-ttyd.dgkwlntjskms.usw.sealos.io`
 
 ### ttyd Configuration
+
 - Startup command: `ttyd -W bash`
 - Port: 7681
 - Separate Ingress with WebSocket annotations
@@ -94,6 +106,7 @@ KUBECONFIG_PATH=./.secret/kubeconfig
 ## Development Principles
 
 ### Isolated Feature Modification
+
 When modifying a feature, try not to affect other normal features unless there are dependencies.
 
 1. Scope changes carefully
@@ -102,29 +115,34 @@ When modifying a feature, try not to affect other normal features unless there a
 4. Test adjacent features
 
 ### Docker Image Management
+
 **NEVER build images locally!** Use GitHub Actions:
+
 - Workflow: `.github/workflows/build-runtime-manual.yml`
 - Repository: `fullstackagent/fullstack-web-runtime`
 
 ## Common Development Tasks
 
-| Task | Command/Location |
-|------|-----------------|
+| Task                      | Command/Location                           |
+| ------------------------- | ------------------------------------------ |
 | Add environment variables | Modify `KubernetesService.createSandbox()` |
-| Update resources | Edit deployment spec in service |
-| Add database models | Update schema.prisma → generate → push |
-| Debug deployments | Use `k8sService.getSandboxStatus()` |
-| Check logs | Use `kubectl logs` with kubeconfig |
+| Update resources          | Edit deployment spec in service            |
+| Add database models       | Update schema.prisma → generate → push     |
+| Debug deployments         | Use `k8sService.getSandboxStatus()`        |
+| Check logs                | Use `kubectl logs` with kubeconfig         |
 
 ## Troubleshooting
 
 ### Common Issues
+
 1. **Kubernetes API Connection Failed**
+
    - Check kubeconfig at `.secret/kubeconfig`
    - Verify server endpoint is not localhost
    - Ensure namespace matches kubeconfig
 
 2. **Terminal Not Loading**
+
    - Check ttyd pod status
    - Verify Ingress WebSocket annotations
    - Ensure correct ttyd URL format
@@ -135,6 +153,7 @@ When modifying a feature, try not to affect other normal features unless there a
    - Verify base64 credential decoding
 
 ## Security
+
 - OAuth tokens: Encrypted storage in database
 - Database passwords: Kubernetes Secrets
 - Environment variables: Secure injection via deployment spec
