@@ -276,19 +276,16 @@ export default function TerminalComponent({ projectId, sandboxUrl, startSandboxT
   // If sandbox is running, show terminal iframe
   return (
     <div className="h-full w-full bg-black rounded-lg flex flex-col">
-      <div className="bg-gray-900 border-b border-gray-800 p-2 flex items-center">
-        <div className="flex items-center gap-2">
-          <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse" />
-          <span className="text-sm text-gray-400">Sandbox Pod Running</span>
-        </div>
-      </div>
-
       {/* Terminal iframe */}
       {ttydUrl && (
         <iframe
           src={ttydUrl}
           className="flex-1 w-full bg-black"
-          style={{ border: "none" }}
+          style={{
+            border: "none",
+            minHeight: "100%",
+            height: "100%"
+          }}
           title="Terminal"
         />
       )}

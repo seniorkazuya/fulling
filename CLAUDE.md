@@ -70,13 +70,13 @@ Key models in `/prisma/schema.prisma`:
 DATABASE_URL=postgresql://...
 GITHUB_CLIENT_ID=...
 GITHUB_CLIENT_SECRET=...
-NEXTAUTH_URL=https://dgkwlntjskms.usw.sealos.io:3000
+NEXTAUTH_URL=
 NEXTAUTH_SECRET=...
 KUBECONFIG_PATH=./.secret/kubeconfig
 ```
 
 ### Sandbox Deployment Process
-1. Database Creation via KubeBlocks Cluster
+1. Database Creation via kubernetes
 2. Deploy fullstack-web-runtime pod
 3. Setup Service and Ingress
 4. Initialize ttyd service

@@ -69,22 +69,54 @@ export async function POST(request: NextRequest) {
         name,
         description,
         userId: user.id,
-        status: "READY", // Set to READY for now, skip K8s creation
+        status: "INITIALIZING",
       },
     });
 
-    // TODO: Enable Kubernetes resources creation later
-    // For now, just create a mock sandbox entry
-    await prisma.sandbox.create({
-      data: {
-        projectId: project.id,
-        k8sNamespace: "default",
-        k8sDeploymentName: `sandbox-${project.id}`,
-        k8sServiceName: `sandbox-${project.id}`,
-        publicUrl: `https://sandbox-${project.id}.dgkwlntjskms.usw.sealos.io`,
-        status: "RUNNING",
-      },
-    });
+    console.log(`🚀 Creating Kubernetes resources for project: ${project.name} (ID: ${project.id})`);
+
+    try {
+      // Create database first
+      const databaseInfo = await k8sService.createPostgreSQLDatabase(project.name);
+      console.log(`✅ Database created: ${databaseInfo.clusterName}`);
+
+      // Create Kubernetes sandbox resources
+      const sandboxInfo = await k8sService.createSandbox(
+        project.name,
+        {}, // envVars
+        k8sService.getDefaultNamespace(),
+        databaseInfo
+      );
+      console.log(`✅ Sandbox created: ${sandboxInfo.deploymentName}`);
+
+      // Create sandbox record in database
+      const sandbox = await prisma.sandbox.create({
+        data: {
+          projectId: project.id,
+          k8sNamespace: k8sService.getDefaultNamespace(),
+          k8sDeploymentName: sandboxInfo.deploymentName,
+          k8sServiceName: sandboxInfo.serviceName,
+          publicUrl: sandboxInfo.publicUrl,
+          ttydUrl: sandboxInfo.ttydUrl,
+          status: "CREATING",
+        },
+      });
+
+      // Update project status
+      await prisma.project.update({
+        where: { id: project.id },
+        data: { status: "READY" },
+      });
+
+      console.log(`✅ Project ${project.name} created successfully with sandbox resources`);
+    } catch (k8sError) {
+      console.error(`❌ Failed to create Kubernetes resources for project ${project.name}:`, k8sError);
+
+      // Clean up the project if Kubernetes creation failed
+      await prisma.project.delete({ where: { id: project.id } });
+
+      throw new Error(`Failed to create sandbox environment: ${k8sError instanceof Error ? k8sError.message : String(k8sError)}`);
+    }
 
     return NextResponse.json(project);
   } catch (error) {

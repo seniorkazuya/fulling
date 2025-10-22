@@ -966,6 +966,93 @@ export class KubernetesService {
     return result;
   }
 
+  async stopSandbox(projectName: string, namespace?: string) {
+    namespace = namespace || this.getDefaultNamespace();
+
+    try {
+      // Convert project name to k8s-compatible format
+      const k8sProjectName = projectName.toLowerCase().replace(/[^a-z0-9-]/g, '').substring(0, 20);
+      console.log(`⏸️ Stopping sandbox for project: ${projectName} (k8s: ${k8sProjectName})`);
+
+      // Find the deployment for this project
+      const deployments = await this.k8sAppsApi.listNamespacedDeployment({ namespace });
+      const deploymentItems = deployments.body?.items || (deployments as any).items || [];
+      console.log(`🔍 Looking for deployments matching: ${k8sProjectName}-agentruntime-* in namespace ${namespace}`);
+      console.log(`📋 Found ${deploymentItems.length} deployments total:`);
+      deploymentItems.forEach((dep: any) => {
+        console.log(`  - ${dep.metadata.name} (${dep.spec.replicas} replicas)`);
+      });
+      const projectDeployment = deploymentItems.find((dep: any) =>
+        dep.metadata.name.startsWith(`${k8sProjectName}-agentruntime-`)
+      );
+
+      if (!projectDeployment) {
+        throw new Error(`No deployment found for project ${projectName}`);
+      }
+
+      const deploymentName = projectDeployment.metadata.name;
+
+      // Scale down to 0 replicas by replacing the deployment
+      const updatedDeployment = {
+        ...projectDeployment,
+        spec: {
+          ...projectDeployment.spec,
+          replicas: 0
+        }
+      };
+
+      await this.k8sAppsApi.replaceNamespacedDeployment({
+        name: deploymentName,
+        namespace,
+        body: updatedDeployment
+      });
+
+      console.log(`✅ Stopped deployment: ${deploymentName} (scaled to 0 replicas)`);
+    } catch (error) {
+      console.error(`Failed to stop sandbox:`, error);
+      throw error;
+    }
+  }
+
+  async startSandbox(projectName: string, namespace?: string) {
+    namespace = namespace || this.getDefaultNamespace();
+
+    try {
+      // Convert project name to k8s-compatible format
+      const k8sProjectName = projectName.toLowerCase().replace(/[^a-z0-9-]/g, '').substring(0, 20);
+      console.log(`▶️ Starting sandbox for project: ${projectName} (k8s: ${k8sProjectName})`);
+
+      // Find the deployment for this project
+      const deployments = await this.k8sAppsApi.listNamespacedDeployment({ namespace });
+      const deploymentItems = deployments.body?.items || (deployments as any).items || [];
+      const projectDeployment = deploymentItems.find((dep: any) =>
+        dep.metadata.name.startsWith(`${k8sProjectName}-agentruntime-`)
+      );
+
+      if (!projectDeployment) {
+        throw new Error(`No deployment found for project ${projectName}`);
+      }
+
+      const deploymentName = projectDeployment.metadata.name;
+
+      // Scale up to 1 replica
+      await this.k8sAppsApi.patchNamespacedDeployment({
+        name: deploymentName,
+        namespace,
+        body: {
+          spec: {
+            replicas: 1
+          }
+        }
+      });
+
+      console.log(`✅ Started deployment: ${deploymentName} (scaled to 1 replica)`);
+    } catch (error) {
+      console.error(`Failed to start sandbox:`, error);
+      throw error;
+    }
+  }
+
   // Generate 6-character random suffix for resource names
   private generateRandomSuffix(): string {
     const charset = 'abcdefghijklmnopqrstuvwxyz0123456789';

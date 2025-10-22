@@ -85,7 +85,7 @@ export default function SandboxProgress({ projectId, onComplete, onError }: Sand
     }
 
     try {
-      const response = await fetch(`/api/sandbox/${projectId}`);
+      const response = await fetch(`/api/projects/${projectId}/sandbox/status`);
 
       // Check if response is ok before parsing
       if (!response.ok) {
