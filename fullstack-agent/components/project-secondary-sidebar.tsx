@@ -40,12 +40,8 @@ export default function ProjectSecondarySidebar({
     e.preventDefault();
 
     if (sectionId === "terminal") {
-      // For terminal, just toggle visibility without navigation
-      if (!isTerminalVisible) {
-        showTerminal(project.id);
-        // Update URL without navigation
-        window.history.pushState({}, '', href);
-      }
+      // For terminal, navigate without hiding (terminal page will show it)
+      router.push(href);
     } else {
       // For other sections, hide terminal and navigate
       hideTerminal();
@@ -111,12 +107,12 @@ export default function ProjectSecondarySidebar({
                 href={section.href}
                 onClick={(e) => handleSectionClick(e, section.id, section.href)}
                 className={cn(
-                  "w-full flex items-center px-3 py-2 text-sm transition-colors",
+                  "w-full flex items-center px-3 py-2 text-sm transition-colors min-h-[32px]",
                   isActive ? "bg-[#2a2d2e]" : "hover:bg-[#2a2d2e]"
                 )}
               >
-                <Icon className="h-4 w-4 mr-2 text-gray-400" />
-                <span className="text-gray-300">{section.label}</span>
+                <Icon className="h-4 w-4 mr-2 text-gray-400 flex-shrink-0" />
+                <span className="text-gray-300 truncate flex-1">{section.label}</span>
               </a>
             );
           })}
@@ -126,14 +122,14 @@ export default function ProjectSecondarySidebar({
             <button
               onClick={() => setIsConfigExpanded(!isConfigExpanded)}
               className={cn(
-                "w-full flex items-center px-3 py-2 text-sm transition-colors",
+                "w-full flex items-center px-3 py-2 text-sm transition-colors min-h-[32px]",
                 isConfigActive ? "bg-[#2a2d2e]" : "hover:bg-[#2a2d2e]"
               )}
             >
-              <Settings className="h-4 w-4 mr-2 text-gray-400" />
-              <span className="text-gray-300 flex-1 text-left">Configuration</span>
+              <Settings className="h-4 w-4 mr-2 text-gray-400 flex-shrink-0" />
+              <span className="text-gray-300 flex-1 text-left truncate">Configuration</span>
               <ChevronDown className={cn(
-                "h-4 w-4 text-gray-400 transition-transform",
+                "h-4 w-4 text-gray-400 transition-transform flex-shrink-0",
                 !isConfigExpanded && "-rotate-90"
               )} />
             </button>
@@ -150,12 +146,12 @@ export default function ProjectSecondarySidebar({
                       href={section.href}
                       onClick={(e) => handleSectionClick(e, section.id, section.href)}
                       className={cn(
-                        "w-full flex items-center pl-9 pr-3 py-2 text-sm transition-colors",
+                        "w-full flex items-center pl-9 pr-3 py-2 text-sm transition-colors min-h-[32px]",
                         isActive ? "bg-[#2a2d2e]" : "hover:bg-[#2a2d2e]"
                       )}
                     >
-                      <Icon className="h-4 w-4 mr-2 text-gray-400" />
-                      <span className="text-gray-300">{section.label}</span>
+                      <Icon className="h-4 w-4 mr-2 text-gray-400 flex-shrink-0" />
+                      <span className="text-gray-300 truncate flex-1">{section.label}</span>
                     </a>
                   );
                 })}
@@ -174,12 +170,12 @@ export default function ProjectSecondarySidebar({
                 href={section.href}
                 onClick={(e) => handleSectionClick(e, section.id, section.href)}
                 className={cn(
-                  "w-full flex items-center px-3 py-2 text-sm transition-colors",
+                  "w-full flex items-center px-3 py-2 text-sm transition-colors min-h-[32px]",
                   isActive ? "bg-[#2a2d2e]" : "hover:bg-[#2a2d2e]"
                 )}
               >
-                <Icon className="h-4 w-4 mr-2 text-gray-400" />
-                <span className="text-gray-300">{section.label}</span>
+                <Icon className="h-4 w-4 mr-2 text-gray-400 flex-shrink-0" />
+                <span className="text-gray-300 truncate flex-1">{section.label}</span>
               </a>
             );
           })}

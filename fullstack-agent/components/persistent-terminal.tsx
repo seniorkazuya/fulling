@@ -18,8 +18,9 @@ export default function PersistentTerminal({ projectId, className = "" }: Persis
     return null;
   }
 
+  // When terminal is visible, it should take up the full main content area
   return (
-    <div className="absolute inset-0 z-10 h-full w-full">
+    <div className="flex-1 flex flex-col min-w-0">
       <TerminalComponent projectId={projectId} />
     </div>
   );

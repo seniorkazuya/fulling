@@ -66,15 +66,15 @@ export default async function ProjectLayout({
         />
 
         {/* Main Content Area */}
-        <div className="flex-1 flex flex-col min-w-0 relative">
-          {/* Persistent Terminal (hidden by default) */}
-          <PersistentTerminal projectId={id} />
-
-          {/* Regular Page Content - will be hidden when terminal is visible */}
-          <ContentWrapper>
+        <ContentWrapper projectId={id}>
+          <div className="flex-1 flex flex-col min-w-0 relative">
+            {/* Regular Page Content */}
             {children}
-          </ContentWrapper>
-        </div>
+          </div>
+        </ContentWrapper>
+
+        {/* Persistent Terminal (hidden by default) - separate from main content */}
+        <PersistentTerminal projectId={id} />
       </div>
     </TerminalProvider>
   );
