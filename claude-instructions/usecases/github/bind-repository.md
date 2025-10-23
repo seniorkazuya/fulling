@@ -16,7 +16,7 @@ This use case describes the process of connecting an existing GitHub repository 
    - User is logged into FullStack Agent
    - User has authenticated via GitHub OAuth
    - User's GitHub token is stored in database (`User.githubToken`)
-   - Token has `repo` scope access
+   - Token has `repo read:org` scope access (updated in v0.2.2)
 
 2. **Project Existence**:
    - User has at least one project created
@@ -67,6 +67,7 @@ User navigates to the GitHub Repository page for a specific project:
       GET https://api.github.com/user/repos?affiliation=owner,organization_member
     ])
     ```
+    **Note**: Requires `read:org` scope for `/user/orgs` endpoint (v0.2.2+)
 11. System builds accounts array (personal + organizations)
 12. System formats and returns accounts + repositories
     ```json
@@ -433,6 +434,42 @@ Once connected, the following features become available:
 - Verify database is running
 - Check DATABASE_URL environment variable
 
+---
+
+### 9. Missing OAuth Scope for Organizations (RESOLVED in v0.2.2)
+
+**Cause**: GitHub OAuth token missing `read:org` scope
+
+**Symptoms**:
+- User has organizations on GitHub (visible on Vercel, GitHub.com)
+- Organizations dropdown shows only personal account ("1 account available")
+- Organization repositories appear in repository list but owner shows as personal account
+- No organization accounts available for selection
+- HTTP Status: 200 OK (but organizations array is empty)
+
+**Root Cause Analysis**:
+- Original OAuth scope: `'read:user user:email repo'`
+- GitHub API `/user/orgs` endpoint requires `read:org` scope
+- Without proper scope, API returns empty array: `[]`
+- This creates confusing UX where org repos are visible but org accounts aren't
+
+**UI Behavior**:
+- Account selector shows only personal account
+- Repository filtering doesn't work for organizations
+- User sees organization repos but can't filter by organization
+- No error message (API succeeds but with incomplete data)
+
+**Resolution** (v0.2.2):
+- **Technical Fix**: Updated OAuth scope to `'read:user user:email repo read:org'`
+- **User Action**: Sign out and sign back in to get new OAuth token
+- **Verification**: Organizations appear in account dropdown after re-authentication
+- **Backward Compatible**: Users without organizations see no change
+
+**Prevention**:
+- Include all required scopes in initial OAuth configuration
+- Test with users who have organization memberships
+- Monitor OAuth scope usage and API responses
+
 ## Success Metrics
 
 - **Primary**: Repository successfully bound (database updated)
@@ -473,7 +510,7 @@ Once connected, the following features become available:
 
 1. **Token Storage**: GitHub tokens encrypted in database
 2. **Authorization**: Each API call verifies project ownership
-3. **Scope Requirement**: Uses `read:user user:email repo` scopes for full access
+3. **Scope Requirement**: Uses `read:user user:email repo read:org` scopes for full access (updated in v0.2.2)
 4. **Organization Access**: Respects organization OAuth app approval settings
 5. **Input Validation**: Repository name format validated server-side (username/repo or org/repo)
 6. **Rate Limiting**: GitHub API rate limits respected (3 parallel calls per page load)
