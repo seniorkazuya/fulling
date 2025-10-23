@@ -29,27 +29,44 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Fetch repositories using GitHub API
+    // Fetch data from GitHub API in parallel
     const githubClient = createGitHubClient(user.githubToken);
-    const allRepos = await githubClient.listRepos();
+    const [githubUser, allRepos, organizations] = await Promise.all([
+      githubClient.getUser(),
+      githubClient.listRepos(),
+      githubClient.listOrganizations(),
+    ]);
 
-    // Get authenticated user info to filter only owned repos
-    const githubUser = await githubClient.getUser();
+    // Build accounts array (personal account + organizations)
+    const accounts = [
+      {
+        login: githubUser.login,
+        type: 'User' as const,
+        avatarUrl: githubUser.avatar_url,
+        name: githubUser.name,
+      },
+      ...organizations.map((org) => ({
+        login: org.login,
+        type: 'Organization' as const,
+        avatarUrl: org.avatar_url,
+        name: org.login,
+      })),
+    ];
 
-    // Filter to only include repositories owned by the user
-    const ownedRepos = allRepos.filter(
-      (repo) => repo.owner.login === githubUser.login
-    );
-
-    // Format response with essential information
-    const formattedRepos = ownedRepos.map((repo) => ({
+    // Format repositories with owner information
+    const formattedRepos = allRepos.map((repo) => ({
       name: repo.name,
       fullName: repo.full_name,
       private: repo.private,
       description: repo.description,
+      owner: {
+        login: repo.owner.login,
+        type: repo.owner.type,
+      },
     }));
 
     return NextResponse.json({
+      accounts,
       repositories: formattedRepos,
       count: formattedRepos.length,
     });

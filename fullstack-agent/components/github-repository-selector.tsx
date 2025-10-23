@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Check, X, Loader2, AlertCircle } from "lucide-react";
 import {
   Select,
@@ -11,11 +11,22 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 
+interface Account {
+  login: string;
+  type: 'User' | 'Organization';
+  avatarUrl?: string;
+  name?: string | null;
+}
+
 interface Repository {
   name: string;
   fullName: string;
   private: boolean;
   description: string | null;
+  owner: {
+    login: string;
+    type: string;
+  };
 }
 
 interface GitHubRepositorySelectorProps {
@@ -27,7 +38,9 @@ export function GitHubRepositorySelector({
   projectId,
   currentRepo,
 }: GitHubRepositorySelectorProps) {
+  const [accounts, setAccounts] = useState<Account[]>([]);
   const [repositories, setRepositories] = useState<Repository[]>([]);
+  const [selectedAccount, setSelectedAccount] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedRepo, setSelectedRepo] = useState<string | null>(currentRepo);
@@ -35,6 +48,14 @@ export function GitHubRepositorySelector({
   const [disconnecting, setDisconnecting] = useState(false);
 
   const isConnected = !!selectedRepo;
+
+  // Filter repositories by selected account
+  const filteredRepositories = useMemo(() => {
+    if (!selectedAccount) return repositories;
+    return repositories.filter(
+      (repo) => repo.owner.login === selectedAccount
+    );
+  }, [repositories, selectedAccount]);
 
   // Fetch repositories on component mount
   useEffect(() => {
@@ -53,7 +74,13 @@ export function GitHubRepositorySelector({
         throw new Error(data.error || "Failed to fetch repositories");
       }
 
-      setRepositories(data.repositories);
+      setAccounts(data.accounts || []);
+      setRepositories(data.repositories || []);
+
+      // Default to personal account (first in accounts array)
+      if (data.accounts && data.accounts.length > 0) {
+        setSelectedAccount(data.accounts[0].login);
+      }
     } catch (err: any) {
       console.error("Error fetching repositories:", err);
       setError(err.message);
@@ -196,7 +223,7 @@ export function GitHubRepositorySelector({
     );
   }
 
-  // Not connected state - show dropdown
+  // Not connected state - show dropdowns
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between p-4 bg-[#1e1e1e] rounded border border-[#3e3e42]">
@@ -211,31 +238,72 @@ export function GitHubRepositorySelector({
         </div>
       </div>
 
-      <div className="space-y-3">
+      {/* Account Selector */}
+      <div className="space-y-2">
         <label className="text-sm font-medium text-gray-300">
-          Select Repository
+          Account
         </label>
         <Select
-          onValueChange={handleConnect}
-          disabled={connecting}
+          value={selectedAccount || undefined}
+          onValueChange={setSelectedAccount}
         >
           <SelectTrigger className="w-full bg-[#1e1e1e] border-[#3e3e42] text-gray-300">
-            <SelectValue placeholder="Choose a repository..." />
+            <SelectValue placeholder="Select account..." />
           </SelectTrigger>
           <SelectContent className="bg-[#252526] border-[#3e3e42]">
-            {repositories.map((repo) => (
+            {accounts.map((account) => (
               <SelectItem
-                key={repo.fullName}
-                value={repo.fullName}
+                key={account.login}
+                value={account.login}
                 className="text-gray-300 focus:bg-[#1e1e1e] focus:text-gray-200"
               >
-                {repo.fullName}
+                <div className="flex items-center gap-2">
+                  <span>{account.login}</span>
+                  {account.type === 'Organization' && (
+                    <span className="text-xs text-gray-400">(Org)</span>
+                  )}
+                </div>
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
         <p className="text-xs text-gray-400">
-          {repositories.length} {repositories.length === 1 ? "repository" : "repositories"} available
+          {accounts.length} account{accounts.length !== 1 ? 's' : ''} available
+        </p>
+      </div>
+
+      {/* Repository Selector */}
+      <div className="space-y-2">
+        <label className="text-sm font-medium text-gray-300">
+          Select Repository
+        </label>
+        <Select
+          onValueChange={handleConnect}
+          disabled={connecting || !selectedAccount}
+        >
+          <SelectTrigger className="w-full bg-[#1e1e1e] border-[#3e3e42] text-gray-300">
+            <SelectValue placeholder="Choose a repository..." />
+          </SelectTrigger>
+          <SelectContent className="bg-[#252526] border-[#3e3e42]">
+            {filteredRepositories.length > 0 ? (
+              filteredRepositories.map((repo) => (
+                <SelectItem
+                  key={repo.fullName}
+                  value={repo.fullName}
+                  className="text-gray-300 focus:bg-[#1e1e1e] focus:text-gray-200"
+                >
+                  {repo.fullName}
+                </SelectItem>
+              ))
+            ) : (
+              <div className="px-2 py-1.5 text-xs text-gray-400">
+                No repositories found in {selectedAccount}
+              </div>
+            )}
+          </SelectContent>
+        </Select>
+        <p className="text-xs text-gray-400">
+          {filteredRepositories.length} repositor{filteredRepositories.length !== 1 ? 'ies' : 'y'} in {selectedAccount || 'selected account'}
         </p>
       </div>
 
