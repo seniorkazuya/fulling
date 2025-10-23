@@ -18,6 +18,14 @@ export class GitHubService {
     const { data } = await this.octokit.repos.listForAuthenticatedUser({
       sort: 'updated',
       per_page: 100,
+      affiliation: 'owner,organization_member',
+    });
+    return data;
+  }
+
+  async listOrganizations() {
+    const { data } = await this.octokit.orgs.listForAuthenticatedUser({
+      per_page: 100,
     });
     return data;
   }
