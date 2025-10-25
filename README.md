@@ -55,6 +55,10 @@ The FullstackAgent project is designed to streamline the entire full-stack devel
     * Projects can be automatically deployed from the development sandbox to a high-availability production environment, leveraging the underlying **Kubernetes** infrastructure.
     * This aims to abstract away the complexities of deployment, allowing the AI to manage the transition from development to live application.
 
+## Star FullstackAgent on GitHub can get the latest released information.
+
+![star-demo](https://github.com/user-attachments/assets/bc497e0b-bd23-4ded-a231-1e382d56f92e)
+
 ## 🏗️ Architecture
 
 ### System Architecture
