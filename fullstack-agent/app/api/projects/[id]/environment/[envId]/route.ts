@@ -68,16 +68,16 @@ export async function PUT(
         });
 
         // Update the deployment with new environment variables
-        await k8sService.updateDeploymentEnvVars(
+        await k8sService.updateStatefulSetEnvVars(
           project.name,
           sandbox.k8sNamespace || k8sService.getDefaultNamespace(),
           envVarsMap
         );
 
-        console.log(`✅ Updated Kubernetes deployment after editing environment variable: ${envVar.key}`);
+        console.log(`✅ Updated Kubernetes StatefulSet after editing environment variable: ${envVar.key}`);
       }
     } catch (k8sError) {
-      console.error("Failed to update Kubernetes deployment:", k8sError);
+      console.error("Failed to update Kubernetes StatefulSet:", k8sError);
       // Don't fail the request if Kubernetes update fails
     }
 
@@ -149,16 +149,16 @@ export async function DELETE(
         });
 
         // Update the deployment with remaining environment variables
-        await k8sService.updateDeploymentEnvVars(
+        await k8sService.updateStatefulSetEnvVars(
           project.name,
           sandbox.k8sNamespace || k8sService.getDefaultNamespace(),
           envVarsMap
         );
 
-        console.log(`✅ Updated Kubernetes deployment after deleting environment variable: ${envVar.key}`);
+        console.log(`✅ Updated Kubernetes StatefulSet after deleting environment variable: ${envVar.key}`);
       }
     } catch (k8sError) {
-      console.error("Failed to update Kubernetes deployment:", k8sError);
+      console.error("Failed to update Kubernetes StatefulSet:", k8sError);
       // Don't fail the request if Kubernetes update fails
     }
 

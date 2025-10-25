@@ -83,7 +83,7 @@ export async function POST(
         },
       });
 
-      // Update Kubernetes deployment if requested
+      // Update Kubernetes StatefulSet if requested
       if (body.updateDeployment) {
         try {
           // Get sandbox info
@@ -103,17 +103,17 @@ export async function POST(
               envVarsMap[env.key] = env.value;
             });
 
-            // Update the deployment with new environment variables
-            await k8sService.updateDeploymentEnvVars(
+            // Update the StatefulSet with new environment variables
+            await k8sService.updateStatefulSetEnvVars(
               project.name,
               sandbox.k8sNamespace || k8sService.getDefaultNamespace(),
               envVarsMap
             );
 
-            console.log(`✅ Updated Kubernetes deployment with new environment variable: ${body.key}`);
+            console.log(`✅ Updated Kubernetes StatefulSet with new environment variable: ${body.key}`);
           }
         } catch (k8sError) {
-          console.error("Failed to update Kubernetes deployment:", k8sError);
+          console.error("Failed to update Kubernetes StatefulSet:", k8sError);
           // Don't fail the request if Kubernetes update fails
           // The environment variable is already saved in the database
         }

@@ -80,7 +80,7 @@ async function testCreateSandbox() {
     const sandboxInfo = await k8sService.createSandbox(TEST_PROJECT_ID, TEST_ENV_VARS);
 
     console.log(`${colors.green}✓ Sandbox created successfully${colors.reset}`);
-    console.log(`  Deployment: ${sandboxInfo.deploymentName}`);
+    console.log(`  StatefulSet: ${sandboxInfo.statefulSetName}`);
     console.log(`  Service: ${sandboxInfo.serviceName}`);
     console.log(`  Public URL: ${sandboxInfo.publicUrl}`);
     console.log(`  ttyd URL: ${sandboxInfo.ttydUrl}`);

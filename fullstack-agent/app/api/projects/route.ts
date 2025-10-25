@@ -87,14 +87,14 @@ export async function POST(request: NextRequest) {
         k8sService.getDefaultNamespace(),
         databaseInfo
       );
-      console.log(`✅ Sandbox created: ${sandboxInfo.deploymentName}`);
+      console.log(`✅ Sandbox created: ${sandboxInfo.statefulSetName}`);
 
       // Create sandbox record in database
       const sandbox = await prisma.sandbox.create({
         data: {
           projectId: project.id,
           k8sNamespace: k8sService.getDefaultNamespace(),
-          k8sDeploymentName: sandboxInfo.deploymentName,
+          k8sDeploymentName: sandboxInfo.statefulSetName,
           k8sServiceName: sandboxInfo.serviceName,
           publicUrl: sandboxInfo.publicUrl,
           ttydUrl: sandboxInfo.ttydUrl,

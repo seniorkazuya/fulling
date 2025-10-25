@@ -338,12 +338,12 @@ export class KubernetesService {
       PROJECT_NAME: projectName,
     };
 
-    // 1. Create Deployment with Sealos-compliant configuration
+    // 1. Create StatefulSet with Sealos-compliant configuration and persistent storage
     const currentTime = new Date().toISOString().replace(/[-:T.]/g, '').substring(0, 14);
 
-    const deployment = {
+    const statefulSet = {
       apiVersion: 'apps/v1',
-      kind: 'Deployment',
+      kind: 'StatefulSet',
       metadata: {
         name: sandboxName,
         namespace,
@@ -351,7 +351,7 @@ export class KubernetesService {
           originImageName: getRuntimeImage(),
           'deploy.cloud.sealos.io/minReplicas': '1',
           'deploy.cloud.sealos.io/maxReplicas': '1',
-          'deploy.cloud.sealos.io/resize': '0Gi',
+          'deploy.cloud.sealos.io/resize': VERSIONS.STORAGE.SANDBOX_SIZE,
         },
         labels: {
           'cloud.sealos.io/app-deploy-manager': sandboxName,
@@ -362,18 +362,19 @@ export class KubernetesService {
       spec: {
         replicas: 1,
         revisionHistoryLimit: 1,
+        serviceName: `${sandboxName}-service`,
         selector: {
           matchLabels: {
             app: sandboxName,
           },
         },
-        strategy: {
+        updateStrategy: {
           type: 'RollingUpdate',
           rollingUpdate: {
-            maxUnavailable: 0,
-            maxSurge: 1,
+            maxUnavailable: '50%',
           },
         },
+        minReadySeconds: 10,
         template: {
           metadata: {
             labels: {
@@ -384,6 +385,7 @@ export class KubernetesService {
           },
           spec: {
             automountServiceAccountToken: false,
+            terminationGracePeriodSeconds: 10,
             containers: [
               {
                 name: sandboxName,
@@ -412,17 +414,41 @@ export class KubernetesService {
                   },
                 ],
                 imagePullPolicy: 'Always',
-                volumeMounts: [],
+                volumeMounts: [
+                  {
+                    name: 'vn-homevn-agent',
+                    mountPath: '/home/agent',
+                  },
+                ],
                 // Let the container use its default command which should have ttyd configured
               },
             ],
             volumes: [],
           },
         },
+        volumeClaimTemplates: [
+          {
+            metadata: {
+              annotations: {
+                path: '/home/agent',
+                value: VERSIONS.STORAGE.SANDBOX_SIZE.replace('Gi', ''),
+              },
+              name: 'vn-homevn-agent',
+            },
+            spec: {
+              accessModes: ['ReadWriteOnce'],
+              resources: {
+                requests: {
+                  storage: VERSIONS.STORAGE.SANDBOX_SIZE,
+                },
+              },
+            },
+          },
+        ],
       },
     };
 
-    await this.k8sAppsApi.createNamespacedDeployment({ namespace, body: deployment as any });
+    await this.k8sAppsApi.createNamespacedStatefulSet({ namespace, body: statefulSet as any });
 
     // 2. Create Service with Sealos labels
     const serviceName = `${sandboxName}-service`;
@@ -590,7 +616,7 @@ export class KubernetesService {
     }
 
     return {
-      deploymentName: sandboxName,
+      statefulSetName: sandboxName,
       serviceName: serviceName,
       publicUrl: `https://${appDomain}.usw.sealos.io`,
       ttydUrl: `https://${ttydDomain}.usw.sealos.io`,
@@ -606,24 +632,24 @@ export class KubernetesService {
       const k8sProjectName = projectName.toLowerCase().replace(/[^a-z0-9-]/g, '').substring(0, 20);
       console.log(`🗑️ Deleting sandbox for project: ${projectName} (k8s: ${k8sProjectName})`);
 
-      // Delete Deployments
-      const deployments = await this.k8sAppsApi.listNamespacedDeployment({ namespace });
-      // Fix: Handle both response.body.items and response.items patterns
-      const deploymentItems = deployments.body?.items || (deployments as any).items || [];
-      console.log(`📦 Deployments response:`, deployments.body ? 'has body' : 'no body', deploymentItems.length, 'items');
-      const projectDeployments = deploymentItems.filter((dep: any) =>
-        dep.metadata.name.startsWith(`${k8sProjectName}-agentruntime-`)
+      // Delete StatefulSets
+      const statefulSets = await this.k8sAppsApi.listNamespacedStatefulSet({ namespace });
+      // Fix: Handle both response.body.items and response.items patterns for StatefulSet
+      const statefulSetItems = (statefulSets as any).body?.items || statefulSets.items || [];
+      console.log(`📦 StatefulSets response:`, (statefulSets as any).body ? 'has body' : 'no body', statefulSetItems.length, 'items');
+      const projectStatefulSets = statefulSetItems.filter((sts: any) =>
+        sts.metadata.name.startsWith(`${k8sProjectName}-agentruntime-`)
       );
 
-      for (const deployment of projectDeployments) {
+      for (const statefulSet of projectStatefulSets) {
         try {
-          await this.k8sAppsApi.deleteNamespacedDeployment({
-            name: deployment.metadata.name,
+          await this.k8sAppsApi.deleteNamespacedStatefulSet({
+            name: statefulSet.metadata.name,
             namespace
           });
-          console.log(`Deleted deployment: ${deployment.metadata.name}`);
+          console.log(`Deleted StatefulSet: ${statefulSet.metadata.name}`);
         } catch (error) {
-          console.error(`Failed to delete deployment ${deployment.metadata.name}:`, error);
+          console.error(`Failed to delete StatefulSet ${statefulSet.metadata.name}:`, error);
         }
       }
 
@@ -681,20 +707,20 @@ export class KubernetesService {
       // Convert project name to k8s-compatible format
       const k8sProjectName = projectName.toLowerCase().replace(/[^a-z0-9-]/g, '').substring(0, 20);
 
-      // Find deployment with new naming pattern
-      const deployments = await this.k8sAppsApi.listNamespacedDeployment({ namespace });
-      // Fix: Handle both response.body.items and response.items patterns
-      const deploymentItems = deployments.body?.items || (deployments as any).items || [];
-      const projectDeployment = deploymentItems.find((dep: any) =>
-        dep.metadata.name.startsWith(`${k8sProjectName}-agentruntime-`)
+      // Find StatefulSet with new naming pattern
+      const statefulSets = await this.k8sAppsApi.listNamespacedStatefulSet({ namespace });
+      // Fix: Handle both response.body.items and response.items patterns for StatefulSet
+      const statefulSetItems = (statefulSets as any).body?.items || statefulSets.items || [];
+      const projectStatefulSet = statefulSetItems.find((sts: any) =>
+        sts.metadata.name.startsWith(`${k8sProjectName}-agentruntime-`)
       );
 
-      if (!projectDeployment) {
+      if (!projectStatefulSet) {
         return 'TERMINATED';
       }
 
-      const replicas = projectDeployment.status?.replicas || 0;
-      const readyReplicas = projectDeployment.status?.readyReplicas || 0;
+      const replicas = projectStatefulSet.status?.replicas || 0;
+      const readyReplicas = projectStatefulSet.status?.readyReplicas || 0;
 
       if (readyReplicas === replicas && replicas > 0) {
         return 'RUNNING';
@@ -758,25 +784,25 @@ export class KubernetesService {
     return false;
   }
 
-  async updateDeploymentEnvVars(projectName: string, namespace: string, envVars: Record<string, string>) {
+  async updateStatefulSetEnvVars(projectName: string, namespace: string, envVars: Record<string, string>) {
     namespace = namespace || this.getDefaultNamespace();
 
     // Convert project name to k8s-compatible format
     const k8sProjectName = projectName.toLowerCase().replace(/[^a-z0-9-]/g, '').substring(0, 20);
 
     try {
-      // Find the deployment for this project
-      const deployments = await this.k8sAppsApi.listNamespacedDeployment({ namespace });
-      const deploymentItems = (deployments as any).body?.items || (deployments as any).items || [];
-      const projectDeployment = deploymentItems.find((dep: any) =>
-        dep.metadata.name.startsWith(`${k8sProjectName}-agentruntime-`)
+      // Find the StatefulSet for this project
+      const statefulSets = await this.k8sAppsApi.listNamespacedStatefulSet({ namespace });
+      const statefulSetItems = (statefulSets as any).body?.items || statefulSets.items || [];
+      const projectStatefulSet = statefulSetItems.find((sts: any) =>
+        sts.metadata.name.startsWith(`${k8sProjectName}-agentruntime-`)
       );
 
-      if (!projectDeployment) {
-        throw new Error(`No deployment found for project ${projectName}`);
+      if (!projectStatefulSet) {
+        throw new Error(`No StatefulSet found for project ${projectName}`);
       }
 
-      const deploymentName = projectDeployment.metadata.name;
+      const statefulSetName = projectStatefulSet.metadata.name;
 
       // Load Claude Code environment variables from .secret/.env
       const claudeEnvPath = path.join(process.cwd(), '.secret', '.env');
@@ -816,17 +842,17 @@ export class KubernetesService {
         TTYD_INTERFACE: '0.0.0.0',
       };
 
-      // Update the deployment with new environment variables
-      const updatedDeployment = {
-        ...projectDeployment,
+      // Update the StatefulSet with new environment variables
+      const updatedStatefulSet = {
+        ...projectStatefulSet,
         spec: {
-          ...projectDeployment.spec,
+          ...projectStatefulSet.spec,
           template: {
-            ...projectDeployment.spec.template,
+            ...projectStatefulSet.spec.template,
             spec: {
-              ...projectDeployment.spec.template.spec,
-              containers: projectDeployment.spec.template.spec.containers.map((container: any) => {
-                if (container.name === deploymentName) {
+              ...projectStatefulSet.spec.template.spec,
+              containers: projectStatefulSet.spec.template.spec.containers.map((container: any) => {
+                if (container.name === statefulSetName) {
                   return {
                     ...container,
                     env: Object.entries(allEnvVars).map(([key, value]) => ({
@@ -843,18 +869,18 @@ export class KubernetesService {
       };
 
       // Apply the update
-      await this.k8sAppsApi.replaceNamespacedDeployment({
-        name: deploymentName,
+      await this.k8sAppsApi.replaceNamespacedStatefulSet({
+        name: statefulSetName,
         namespace,
-        body: updatedDeployment,
+        body: updatedStatefulSet,
       });
 
-      console.log(`✅ Updated deployment ${deploymentName} with new environment variables`);
+      console.log(`✅ Updated StatefulSet ${statefulSetName} with new environment variables`);
 
-      // The deployment will automatically restart the pods with new environment variables
+      // The StatefulSet will automatically restart the pods with new environment variables
       return true;
     } catch (error) {
-      console.error(`Failed to update deployment environment variables:`, error);
+      console.error(`Failed to update StatefulSet environment variables:`, error);
       throw error;
     }
   }
@@ -974,40 +1000,40 @@ export class KubernetesService {
       const k8sProjectName = projectName.toLowerCase().replace(/[^a-z0-9-]/g, '').substring(0, 20);
       console.log(`⏸️ Stopping sandbox for project: ${projectName} (k8s: ${k8sProjectName})`);
 
-      // Find the deployment for this project
-      const deployments = await this.k8sAppsApi.listNamespacedDeployment({ namespace });
-      const deploymentItems = deployments.body?.items || (deployments as any).items || [];
-      console.log(`🔍 Looking for deployments matching: ${k8sProjectName}-agentruntime-* in namespace ${namespace}`);
-      console.log(`📋 Found ${deploymentItems.length} deployments total:`);
-      deploymentItems.forEach((dep: any) => {
-        console.log(`  - ${dep.metadata.name} (${dep.spec.replicas} replicas)`);
+      // Find the StatefulSet for this project
+      const statefulSets = await this.k8sAppsApi.listNamespacedStatefulSet({ namespace });
+      const statefulSetItems = (statefulSets as any).body?.items || statefulSets.items || [];
+      console.log(`🔍 Looking for StatefulSets matching: ${k8sProjectName}-agentruntime-* in namespace ${namespace}`);
+      console.log(`📋 Found ${statefulSetItems.length} StatefulSets total:`);
+      statefulSetItems.forEach((sts: any) => {
+        console.log(`  - ${sts.metadata.name} (${sts.spec.replicas} replicas)`);
       });
-      const projectDeployment = deploymentItems.find((dep: any) =>
-        dep.metadata.name.startsWith(`${k8sProjectName}-agentruntime-`)
+      const projectStatefulSet = statefulSetItems.find((sts: any) =>
+        sts.metadata.name.startsWith(`${k8sProjectName}-agentruntime-`)
       );
 
-      if (!projectDeployment) {
-        throw new Error(`No deployment found for project ${projectName}`);
+      if (!projectStatefulSet) {
+        throw new Error(`No StatefulSet found for project ${projectName}`);
       }
 
-      const deploymentName = projectDeployment.metadata.name;
+      const statefulSetName = projectStatefulSet.metadata.name;
 
-      // Scale down to 0 replicas by replacing the deployment
-      const updatedDeployment = {
-        ...projectDeployment,
+      // Scale down to 0 replicas by replacing the StatefulSet
+      const updatedStatefulSet = {
+        ...projectStatefulSet,
         spec: {
-          ...projectDeployment.spec,
+          ...projectStatefulSet.spec,
           replicas: 0
         }
       };
 
-      await this.k8sAppsApi.replaceNamespacedDeployment({
-        name: deploymentName,
+      await this.k8sAppsApi.replaceNamespacedStatefulSet({
+        name: statefulSetName,
         namespace,
-        body: updatedDeployment
+        body: updatedStatefulSet
       });
 
-      console.log(`✅ Stopped deployment: ${deploymentName} (scaled to 0 replicas)`);
+      console.log(`✅ Stopped StatefulSet: ${statefulSetName} (scaled to 0 replicas)`);
     } catch (error) {
       console.error(`Failed to stop sandbox:`, error);
       throw error;
@@ -1022,22 +1048,22 @@ export class KubernetesService {
       const k8sProjectName = projectName.toLowerCase().replace(/[^a-z0-9-]/g, '').substring(0, 20);
       console.log(`▶️ Starting sandbox for project: ${projectName} (k8s: ${k8sProjectName})`);
 
-      // Find the deployment for this project
-      const deployments = await this.k8sAppsApi.listNamespacedDeployment({ namespace });
-      const deploymentItems = deployments.body?.items || (deployments as any).items || [];
-      const projectDeployment = deploymentItems.find((dep: any) =>
-        dep.metadata.name.startsWith(`${k8sProjectName}-agentruntime-`)
+      // Find the StatefulSet for this project
+      const statefulSets = await this.k8sAppsApi.listNamespacedStatefulSet({ namespace });
+      const statefulSetItems = (statefulSets as any).body?.items || statefulSets.items || [];
+      const projectStatefulSet = statefulSetItems.find((sts: any) =>
+        sts.metadata.name.startsWith(`${k8sProjectName}-agentruntime-`)
       );
 
-      if (!projectDeployment) {
-        throw new Error(`No deployment found for project ${projectName}`);
+      if (!projectStatefulSet) {
+        throw new Error(`No StatefulSet found for project ${projectName}`);
       }
 
-      const deploymentName = projectDeployment.metadata.name;
+      const statefulSetName = projectStatefulSet.metadata.name;
 
       // Scale up to 1 replica
-      await this.k8sAppsApi.patchNamespacedDeployment({
-        name: deploymentName,
+      await this.k8sAppsApi.patchNamespacedStatefulSet({
+        name: statefulSetName,
         namespace,
         body: {
           spec: {
@@ -1046,7 +1072,7 @@ export class KubernetesService {
         }
       });
 
-      console.log(`✅ Started deployment: ${deploymentName} (scaled to 1 replica)`);
+      console.log(`✅ Started StatefulSet: ${statefulSetName} (scaled to 1 replica)`);
     } catch (error) {
       console.error(`Failed to start sandbox:`, error);
       throw error;
