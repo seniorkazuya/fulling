@@ -40,6 +40,7 @@ export const VERSIONS = {
   // Storage configuration
   STORAGE: {
     DATABASE_SIZE: '3Gi',
+    SANDBOX_SIZE: '5Gi',
     STORAGE_CLASS: 'openebs-backup',
   },
 } as const;
