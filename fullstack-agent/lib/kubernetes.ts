@@ -338,7 +338,54 @@ export class KubernetesService {
       PROJECT_NAME: projectName,
     };
 
-    // 1. Create StatefulSet with Sealos-compliant configuration and persistent storage
+    // Read kubeconfig content for ConfigMap creation
+    let kubeconfigContent = '';
+    try {
+      // Use same path finding logic as constructor
+      let kubeconfigPath = path.join(process.cwd(), '.secret', 'kubeconfig');
+      if (!fs.existsSync(kubeconfigPath)) {
+        kubeconfigPath = path.join(process.cwd(), '..', '.secret', 'kubeconfig');
+      }
+
+      if (fs.existsSync(kubeconfigPath)) {
+        kubeconfigContent = fs.readFileSync(kubeconfigPath, 'utf8');
+        console.log(`✅ Loaded kubeconfig for ConfigMap creation`);
+      } else {
+        console.warn(`⚠️  Kubeconfig file not found for ConfigMap creation`);
+      }
+    } catch (error) {
+      console.error(`❌ Failed to read kubeconfig for ConfigMap: ${error}`);
+    }
+
+    // 1. Create ConfigMap with kubeconfig content
+    if (kubeconfigContent) {
+      const configMap = {
+        apiVersion: 'v1',
+        kind: 'ConfigMap',
+        metadata: {
+          name: `${sandboxName}-kubeconfig`,
+          namespace,
+          labels: {
+            'cloud.sealos.io/app-deploy-manager': sandboxName,
+            app: sandboxName,
+            'project.fullstackagent.io/name': k8sProjectName,
+          },
+        },
+        data: {
+          'kubeconfig': kubeconfigContent,
+        },
+      };
+
+      try {
+        await this.k8sApi.createNamespacedConfigMap({ namespace, body: configMap as any });
+        console.log(`✅ Created ConfigMap: ${sandboxName}-kubeconfig`);
+      } catch (error) {
+        console.error(`❌ Failed to create ConfigMap: ${error}`);
+        throw error;
+      }
+    }
+
+    // 2. Create StatefulSet with Sealos-compliant configuration and persistent storage
     const currentTime = new Date().toISOString().replace(/[-:T.]/g, '').substring(0, 14);
 
     const statefulSet = {
@@ -414,16 +461,36 @@ export class KubernetesService {
                   },
                 ],
                 imagePullPolicy: 'Always',
+                lifecycle: {
+                  postStart: {
+                    exec: {
+                      command: kubeconfigContent
+                        ? ['sh', '-c', 'mkdir -p /home/agent/.kube && cp /tmp/kubeconfig/kubeconfig /home/agent/.kube/config']
+                        : ['sh', '-c', 'mkdir -p /home/agent/.kube && touch /home/agent/.kube/config'],
+                    },
+                  },
+                },
                 volumeMounts: [
                   {
                     name: 'vn-homevn-agent',
                     mountPath: '/home/agent',
                   },
+                  ...(kubeconfigContent ? [{
+                    name: 'kubeconfig-volume',
+                    mountPath: '/tmp/kubeconfig',
+                  }] : []),
                 ],
                 // Let the container use its default command which should have ttyd configured
               },
             ],
-            volumes: [],
+            volumes: [
+              ...(kubeconfigContent ? [{
+                name: 'kubeconfig-volume',
+                configMap: {
+                  name: `${sandboxName}-kubeconfig`,
+                },
+              }] : []),
+            ],
           },
         },
         volumeClaimTemplates: [
@@ -693,6 +760,29 @@ export class KubernetesService {
         } catch (error) {
           console.error(`Failed to delete ingress ${ingress.metadata.name}:`, error);
         }
+      }
+
+      // Delete ConfigMaps (kubeconfig)
+      try {
+        const configMaps = await this.k8sApi.listNamespacedConfigMap({ namespace });
+        const configMapItems = configMaps.body?.items || (configMaps as any).items || [];
+        const projectConfigMaps = configMapItems.filter((cm: any) =>
+          cm.metadata.name.startsWith(`${k8sProjectName}-agentruntime-`) && cm.metadata.name.endsWith('-kubeconfig')
+        );
+
+        for (const configMap of projectConfigMaps) {
+          try {
+            await this.k8sApi.deleteNamespacedConfigMap({
+              name: configMap.metadata.name,
+              namespace
+            });
+            console.log(`Deleted ConfigMap: ${configMap.metadata.name}`);
+          } catch (error) {
+            console.error(`Failed to delete ConfigMap ${configMap.metadata.name}:`, error);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to list or delete ConfigMaps:', error);
       }
 
     } catch (error) {
