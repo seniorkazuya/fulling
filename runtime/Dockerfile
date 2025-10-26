@@ -67,8 +67,8 @@ RUN npm install -g \
     postcss
 
 # Set up a non-root user for better security (must be before creating user-specific directories)
-RUN useradd -m -s /bin/bash developer && \
-    echo 'developer ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
+RUN useradd -m -s /bin/bash agent && \
+    echo 'agent ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
 
 # Install Buildah and related container tools for unprivileged operation
 RUN apt-get update && \
@@ -142,12 +142,15 @@ RUN wget -O /tmp/ttyd https://github.com/tsl0922/ttyd/releases/latest/download/t
     mv /tmp/ttyd /usr/local/bin/ttyd
 
 # Create working directory
-WORKDIR /workspace
+WORKDIR /home/agent
 
 # Copy entrypoint script and bash configuration
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
-COPY .bashrc /root/.bashrc
+COPY .bashrc /home/agent/.bashrc
 RUN chmod +x /usr/local/bin/entrypoint.sh
+
+# Set default user to agent
+USER agent
 
 # Expose common ports for web development
 EXPOSE 3000 3001 5000 5173 8080 8000 5432 7681
