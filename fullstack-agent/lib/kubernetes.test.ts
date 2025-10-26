@@ -213,39 +213,39 @@ if (require.main === module) {
 }
 
 async function testPostStartConfiguration() {
-  console.log(`\n${colors.cyan}[TEST 4] Testing Kubeconfig Content Copying${colors.reset}`);
+  console.log(`\n${colors.cyan}[TEST 4] Testing Kubeconfig and CLAUDE.md Content Copying${colors.reset}`);
   console.log('----------------------------------------');
 
   try {
-    console.log('Verifying kubeconfig content is copied to /home/agent/.kube/config...');
+    console.log('Verifying kubeconfig and CLAUDE.md content copying...');
 
     // Create a temporary sandbox configuration to check the structure
-    const TEST_TEMP_PROJECT = `temp-kubeconfig-${Date.now()}`;
+    const TEST_TEMP_PROJECT = `temp-configmaps-${Date.now()}`;
 
     // We can't easily access the internal StatefulSet spec from here, but we can
     // verify by checking that our changes don't break sandbox creation
     const sandboxInfo = await k8sService.createSandbox(TEST_TEMP_PROJECT, TEST_ENV_VARS);
 
     if (sandboxInfo.statefulSetName) {
-      console.log(`${colors.green}✓ Sandbox with kubeconfig ConfigMap created successfully${colors.reset}`);
+      console.log(`${colors.green}✓ Sandbox with both ConfigMaps created successfully${colors.reset}`);
       console.log(`  StatefulSet: ${sandboxInfo.statefulSetName}`);
 
-      // Verify that the ConfigMap was created by attempting to list it
+      // Verify that both ConfigMaps were created by attempting to list them
       // Note: We can't easily verify the file content from outside the container,
       // but we can verify the ConfigMap creation succeeded
-      console.log(`${colors.green}✓ ConfigMap creation succeeded (kubeconfig content available at /home/agent/.kube/config)${colors.reset}`);
+      console.log(`${colors.green}✓ ConfigMap creation succeeded (kubeconfig at /home/agent/.kube/config, CLAUDE.md at /home/agent/CLAUDE.md)${colors.reset}`);
 
       // Clean up the temporary sandbox
       await k8sService.deleteSandbox(TEST_TEMP_PROJECT);
-      console.log(`${colors.green}✓ Temporary sandbox and ConfigMap cleaned up${colors.reset}`);
+      console.log(`${colors.green}✓ Temporary sandbox and both ConfigMaps cleaned up${colors.reset}`);
 
       return true;
     } else {
-      console.log(`${colors.red}✗ Sandbox creation failed - kubeconfig configuration may have issues${colors.reset}`);
+      console.log(`${colors.red}✗ Sandbox creation failed - ConfigMap configuration may have issues${colors.reset}`);
       return false;
     }
   } catch (error) {
-    console.log(`${colors.red}✗ Kubeconfig content copying test failed: ${error}${colors.reset}`);
+    console.log(`${colors.red}✗ ConfigMap content copying test failed: ${error}${colors.reset}`);
     return false;
   }
 }

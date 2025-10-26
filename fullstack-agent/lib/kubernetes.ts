@@ -357,6 +357,25 @@ export class KubernetesService {
       console.error(`❌ Failed to read kubeconfig for ConfigMap: ${error}`);
     }
 
+    // Read CLAUDE.md content for ConfigMap creation
+    let claudeMdContent = '';
+    try {
+      // CLAUDE.md is in repository root (same level as fullstack-agent directory)
+      let claudeMdPath = path.join(process.cwd(), '..', 'CLAUDE.md');
+      if (!fs.existsSync(claudeMdPath)) {
+        claudeMdPath = path.join(process.cwd(), 'CLAUDE.md');
+      }
+
+      if (fs.existsSync(claudeMdPath)) {
+        claudeMdContent = fs.readFileSync(claudeMdPath, 'utf8');
+        console.log(`✅ Loaded CLAUDE.md for ConfigMap creation`);
+      } else {
+        console.warn(`⚠️  CLAUDE.md file not found for ConfigMap creation`);
+      }
+    } catch (error) {
+      console.error(`❌ Failed to read CLAUDE.md for ConfigMap: ${error}`);
+    }
+
     // 1. Create ConfigMap with kubeconfig content
     if (kubeconfigContent) {
       const configMap = {
@@ -385,7 +404,35 @@ export class KubernetesService {
       }
     }
 
-    // 2. Create StatefulSet with Sealos-compliant configuration and persistent storage
+    // 2. Create ConfigMap with CLAUDE.md content
+    if (claudeMdContent) {
+      const claudeMdConfigMap = {
+        apiVersion: 'v1',
+        kind: 'ConfigMap',
+        metadata: {
+          name: `${sandboxName}-claude-md`,
+          namespace,
+          labels: {
+            'cloud.sealos.io/app-deploy-manager': sandboxName,
+            app: sandboxName,
+            'project.fullstackagent.io/name': k8sProjectName,
+          },
+        },
+        data: {
+          'CLAUDE.md': claudeMdContent,
+        },
+      };
+
+      try {
+        await this.k8sApi.createNamespacedConfigMap({ namespace, body: claudeMdConfigMap as any });
+        console.log(`✅ Created ConfigMap: ${sandboxName}-claude-md`);
+      } catch (error) {
+        console.error(`❌ Failed to create CLAUDE.md ConfigMap: ${error}`);
+        throw error;
+      }
+    }
+
+    // 3. Create StatefulSet with Sealos-compliant configuration and persistent storage
     const currentTime = new Date().toISOString().replace(/[-:T.]/g, '').substring(0, 14);
 
     const statefulSet = {
@@ -464,9 +511,30 @@ export class KubernetesService {
                 lifecycle: {
                   postStart: {
                     exec: {
-                      command: kubeconfigContent
-                        ? ['sh', '-c', 'mkdir -p /home/agent/.kube && cp /tmp/kubeconfig/kubeconfig /home/agent/.kube/config']
-                        : ['sh', '-c', 'mkdir -p /home/agent/.kube && touch /home/agent/.kube/config'],
+                      command: (() => {
+                        const commands = [];
+
+                        // Handle kubeconfig
+                        if (kubeconfigContent) {
+                          commands.push('mkdir -p /home/agent/.kube && cp /tmp/kubeconfig/kubeconfig /home/agent/.kube/config');
+                        }
+
+                        // Handle CLAUDE.md
+                        if (claudeMdContent) {
+                          commands.push('cp /tmp/claude-md/CLAUDE.md /home/agent/CLAUDE.md');
+                        }
+
+                        // Fallbacks for missing files
+                        if (!kubeconfigContent && !claudeMdContent) {
+                          commands.push('mkdir -p /home/agent/.kube && touch /home/agent/.kube/config');
+                        } else if (!kubeconfigContent && claudeMdContent) {
+                          commands.push('mkdir -p /home/agent/.kube && touch /home/agent/.kube/config');
+                        } else if (kubeconfigContent && !claudeMdContent) {
+                          // kubeconfig already handled, no additional fallback needed
+                        }
+
+                        return ['sh', '-c', commands.join(' && ')];
+                      })(),
                     },
                   },
                 },
@@ -479,6 +547,10 @@ export class KubernetesService {
                     name: 'kubeconfig-volume',
                     mountPath: '/tmp/kubeconfig',
                   }] : []),
+                  ...(claudeMdContent ? [{
+                    name: 'claude-md-volume',
+                    mountPath: '/tmp/claude-md',
+                  }] : []),
                 ],
                 // Let the container use its default command which should have ttyd configured
               },
@@ -488,6 +560,12 @@ export class KubernetesService {
                 name: 'kubeconfig-volume',
                 configMap: {
                   name: `${sandboxName}-kubeconfig`,
+                },
+              }] : []),
+              ...(claudeMdContent ? [{
+                name: 'claude-md-volume',
+                configMap: {
+                  name: `${sandboxName}-claude-md`,
                 },
               }] : []),
             ],
@@ -762,12 +840,13 @@ export class KubernetesService {
         }
       }
 
-      // Delete ConfigMaps (kubeconfig)
+      // Delete ConfigMaps (kubeconfig + CLAUDE.md)
       try {
         const configMaps = await this.k8sApi.listNamespacedConfigMap({ namespace });
         const configMapItems = configMaps.body?.items || (configMaps as any).items || [];
         const projectConfigMaps = configMapItems.filter((cm: any) =>
-          cm.metadata.name.startsWith(`${k8sProjectName}-agentruntime-`) && cm.metadata.name.endsWith('-kubeconfig')
+          cm.metadata.name.startsWith(`${k8sProjectName}-agentruntime-`) &&
+          (cm.metadata.name.endsWith('-kubeconfig') || cm.metadata.name.endsWith('-claude-md'))
         );
 
         for (const configMap of projectConfigMaps) {
