@@ -83,7 +83,7 @@ RUN apt-get update && \
     && rm -rf /var/lib/apt/lists/*
 
 # Configure Buildah and Podman for fully unprivileged operation
-RUN mkdir -p /etc/containers /home/developer/.config/containers && \
+RUN mkdir -p /etc/containers /home/agent/.config/containers && \
     echo '[storage]' > /etc/containers/storage.conf && \
     echo 'driver = "vfs"' >> /etc/containers/storage.conf && \
     echo 'rootless_storage_path = "/tmp/containers-storage"' >> /etc/containers/storage.conf && \
