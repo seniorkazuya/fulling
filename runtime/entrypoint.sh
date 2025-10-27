@@ -1,2 +1,2 @@
 #!/bin/bash
-ttyd -W bash -i
+ttyd -W bash
