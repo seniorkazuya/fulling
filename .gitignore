@@ -55,3 +55,4 @@ secrets.yml
 next-env.d.ts
 
 /lib/generated/prisma
+/.idea

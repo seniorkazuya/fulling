@@ -14,10 +14,7 @@ export class KubernetesService {
 
     // Load kubeconfig from file - CRITICAL: Must use absolute path and verify loading
     // Check both current directory and parent directory for .secret/kubeconfig
-    let kubeconfigPath = path.join(process.cwd(), '.secret', 'kubeconfig');
-    if (!fs.existsSync(kubeconfigPath)) {
-      kubeconfigPath = path.join(process.cwd(), '..', '.secret', 'kubeconfig');
-    }
+    const kubeconfigPath = path.join(process.cwd(), '.secret', 'kubeconfig');
     console.log(`Loading kubeconfig from: ${kubeconfigPath}`);
 
     if (fs.existsSync(kubeconfigPath)) {
@@ -75,7 +72,10 @@ export class KubernetesService {
     namespace = namespace || this.getDefaultNamespace();
     const randomSuffix = this.generateRandomSuffix();
     // Convert project name to k8s-compatible format (lowercase, alphanumeric, hyphens)
-    const k8sProjectName = projectName.toLowerCase().replace(/[^a-z0-9-]/g, '').substring(0, 20);
+    const k8sProjectName = projectName
+      .toLowerCase()
+      .replace(/[^a-z0-9-]/g, '')
+      .substring(0, 20);
     const clusterName = `${k8sProjectName}-agentruntime-${randomSuffix}`;
 
     // 1. Create ServiceAccount (from yaml/database/account.yaml)
@@ -216,7 +216,7 @@ export class KubernetesService {
       version: 'v1alpha1',
       namespace: namespace,
       plural: 'clusters',
-      body: cluster
+      body: cluster,
     });
 
     // Wait for the cluster to be ready and get actual credentials
@@ -236,11 +236,21 @@ export class KubernetesService {
         }
 
         const dbInfo = {
-          host: secretData['host'] ? Buffer.from(secretData['host'], 'base64').toString() : `${clusterName}-postgresql.${namespace}.svc.cluster.local`,
-          port: secretData['port'] ? parseInt(Buffer.from(secretData['port'], 'base64').toString()) : 5432,
-          database: secretData['database'] ? Buffer.from(secretData['database'], 'base64').toString() : 'postgres',
-          username: secretData['username'] ? Buffer.from(secretData['username'], 'base64').toString() : 'postgres',
-          password: secretData['password'] ? Buffer.from(secretData['password'], 'base64').toString() : 'postgres',
+          host: secretData['host']
+            ? Buffer.from(secretData['host'], 'base64').toString()
+            : `${clusterName}-postgresql.${namespace}.svc.cluster.local`,
+          port: secretData['port']
+            ? parseInt(Buffer.from(secretData['port'], 'base64').toString())
+            : 5432,
+          database: secretData['database']
+            ? Buffer.from(secretData['database'], 'base64').toString()
+            : 'postgres',
+          username: secretData['username']
+            ? Buffer.from(secretData['username'], 'base64').toString()
+            : 'postgres',
+          password: secretData['password']
+            ? Buffer.from(secretData['password'], 'base64').toString()
+            : 'postgres',
           clusterName,
         };
 
@@ -252,7 +262,9 @@ export class KubernetesService {
     }
 
     // Fallback: return connection info with defaults if not ready yet
-    console.log(`⚠️ Database cluster '${clusterName}' not ready yet, returning default connection info`);
+    console.log(
+      `⚠️ Database cluster '${clusterName}' not ready yet, returning default connection info`
+    );
     return {
       host: `${clusterName}-postgresql.${namespace}.svc.cluster.local`,
       port: 5432,
@@ -263,11 +275,26 @@ export class KubernetesService {
     };
   }
 
-  async createSandbox(projectName: string, envVars: Record<string, string>, namespace?: string, databaseInfo?: { host: string; port: number; database: string; username: string; password: string; clusterName: string }) {
+  async createSandbox(
+    projectName: string,
+    envVars: Record<string, string>,
+    namespace?: string,
+    databaseInfo?: {
+      host: string;
+      port: number;
+      database: string;
+      username: string;
+      password: string;
+      clusterName: string;
+    }
+  ) {
     namespace = namespace || this.getDefaultNamespace();
     const randomSuffix = this.generateRandomSuffix();
     // Convert project name to k8s-compatible format (lowercase, alphanumeric, hyphens)
-    const k8sProjectName = projectName.toLowerCase().replace(/[^a-z0-9-]/g, '').substring(0, 20);
+    const k8sProjectName = projectName
+      .toLowerCase()
+      .replace(/[^a-z0-9-]/g, '')
+      .substring(0, 20);
     const sandboxName = `${k8sProjectName}-agentruntime-${randomSuffix}`;
 
     // Generate random names for ports (based on YAML template)
@@ -291,7 +318,7 @@ export class KubernetesService {
     if (fs.existsSync(claudeEnvPath)) {
       console.log(`Loading Claude Code env from: ${claudeEnvPath}`);
       const envContent = fs.readFileSync(claudeEnvPath, 'utf-8');
-      envContent.split('\n').forEach(line => {
+      envContent.split('\n').forEach((line) => {
         // Skip comment lines and export statements
         if (line.startsWith('#') || !line.includes('=')) return;
 
@@ -391,7 +418,7 @@ export class KubernetesService {
           },
         },
         data: {
-          'kubeconfig': kubeconfigContent,
+          kubeconfig: kubeconfigContent,
         },
       };
 
@@ -433,7 +460,10 @@ export class KubernetesService {
     }
 
     // 3. Create StatefulSet with Sealos-compliant configuration and persistent storage
-    const currentTime = new Date().toISOString().replace(/[-:T.]/g, '').substring(0, 14);
+    const currentTime = new Date()
+      .toISOString()
+      .replace(/[-:T.]/g, '')
+      .substring(0, 14);
 
     const statefulSet = {
       apiVersion: 'apps/v1',
@@ -516,7 +546,9 @@ export class KubernetesService {
 
                         // Handle kubeconfig
                         if (kubeconfigContent) {
-                          commands.push('mkdir -p /home/agent/.kube && cp /tmp/kubeconfig/kubeconfig /home/agent/.kube/config');
+                          commands.push(
+                            'mkdir -p /home/agent/.kube && cp /tmp/kubeconfig/kubeconfig /home/agent/.kube/config'
+                          );
                         }
 
                         // Handle CLAUDE.md
@@ -526,9 +558,13 @@ export class KubernetesService {
 
                         // Fallbacks for missing files
                         if (!kubeconfigContent && !claudeMdContent) {
-                          commands.push('mkdir -p /home/agent/.kube && touch /home/agent/.kube/config');
+                          commands.push(
+                            'mkdir -p /home/agent/.kube && touch /home/agent/.kube/config'
+                          );
                         } else if (!kubeconfigContent && claudeMdContent) {
-                          commands.push('mkdir -p /home/agent/.kube && touch /home/agent/.kube/config');
+                          commands.push(
+                            'mkdir -p /home/agent/.kube && touch /home/agent/.kube/config'
+                          );
                         } else if (kubeconfigContent && !claudeMdContent) {
                           // kubeconfig already handled, no additional fallback needed
                         }
@@ -543,31 +579,47 @@ export class KubernetesService {
                     name: 'vn-homevn-agent',
                     mountPath: '/home/agent',
                   },
-                  ...(kubeconfigContent ? [{
-                    name: 'kubeconfig-volume',
-                    mountPath: '/tmp/kubeconfig',
-                  }] : []),
-                  ...(claudeMdContent ? [{
-                    name: 'claude-md-volume',
-                    mountPath: '/tmp/claude-md',
-                  }] : []),
+                  ...(kubeconfigContent
+                    ? [
+                        {
+                          name: 'kubeconfig-volume',
+                          mountPath: '/tmp/kubeconfig',
+                        },
+                      ]
+                    : []),
+                  ...(claudeMdContent
+                    ? [
+                        {
+                          name: 'claude-md-volume',
+                          mountPath: '/tmp/claude-md',
+                        },
+                      ]
+                    : []),
                 ],
                 // Let the container use its default command which should have ttyd configured
               },
             ],
             volumes: [
-              ...(kubeconfigContent ? [{
-                name: 'kubeconfig-volume',
-                configMap: {
-                  name: `${sandboxName}-kubeconfig`,
-                },
-              }] : []),
-              ...(claudeMdContent ? [{
-                name: 'claude-md-volume',
-                configMap: {
-                  name: `${sandboxName}-claude-md`,
-                },
-              }] : []),
+              ...(kubeconfigContent
+                ? [
+                    {
+                      name: 'kubeconfig-volume',
+                      configMap: {
+                        name: `${sandboxName}-kubeconfig`,
+                      },
+                    },
+                  ]
+                : []),
+              ...(claudeMdContent
+                ? [
+                    {
+                      name: 'claude-md-volume',
+                      configMap: {
+                        name: `${sandboxName}-claude-md`,
+                      },
+                    },
+                  ]
+                : []),
             ],
           },
         },
@@ -720,7 +772,8 @@ export class KubernetesService {
             'nginx.ingress.kubernetes.io/proxy-buffer-size': '64k',
             'nginx.ingress.kubernetes.io/proxy-send-timeout': '300',
             'nginx.ingress.kubernetes.io/proxy-read-timeout': '300',
-            'nginx.ingress.kubernetes.io/server-snippet': 'client_header_buffer_size 64k;\nlarge_client_header_buffers 4 128k;',
+            'nginx.ingress.kubernetes.io/server-snippet':
+              'client_header_buffer_size 64k;\nlarge_client_header_buffers 4 128k;',
           },
         },
         spec: {
@@ -774,14 +827,22 @@ export class KubernetesService {
     try {
       // Find all resources related to this project
       // Convert project name to k8s-compatible format
-      const k8sProjectName = projectName.toLowerCase().replace(/[^a-z0-9-]/g, '').substring(0, 20);
+      const k8sProjectName = projectName
+        .toLowerCase()
+        .replace(/[^a-z0-9-]/g, '')
+        .substring(0, 20);
       console.log(`🗑️ Deleting sandbox for project: ${projectName} (k8s: ${k8sProjectName})`);
 
       // Delete StatefulSets
       const statefulSets = await this.k8sAppsApi.listNamespacedStatefulSet({ namespace });
       // Fix: Handle both response.body.items and response.items patterns for StatefulSet
       const statefulSetItems = (statefulSets as any).body?.items || statefulSets.items || [];
-      console.log(`📦 StatefulSets response:`, (statefulSets as any).body ? 'has body' : 'no body', statefulSetItems.length, 'items');
+      console.log(
+        `📦 StatefulSets response:`,
+        (statefulSets as any).body ? 'has body' : 'no body',
+        statefulSetItems.length,
+        'items'
+      );
       const projectStatefulSets = statefulSetItems.filter((sts: any) =>
         sts.metadata.name.startsWith(`${k8sProjectName}-agentruntime-`)
       );
@@ -790,7 +851,7 @@ export class KubernetesService {
         try {
           await this.k8sAppsApi.deleteNamespacedStatefulSet({
             name: statefulSet.metadata.name,
-            namespace
+            namespace,
           });
           console.log(`Deleted StatefulSet: ${statefulSet.metadata.name}`);
         } catch (error) {
@@ -810,7 +871,7 @@ export class KubernetesService {
         try {
           await this.k8sApi.deleteNamespacedService({
             name: service.metadata.name,
-            namespace
+            namespace,
           });
           console.log(`Deleted service: ${service.metadata.name}`);
         } catch (error) {
@@ -822,17 +883,20 @@ export class KubernetesService {
       const ingresses = await this.k8sNetworkingApi.listNamespacedIngress({ namespace });
       // Fix: Handle both response.body.items and response.items patterns
       const ingressItems = ingresses.body?.items || (ingresses as any).items || [];
-      const projectIngresses = ingressItems.filter((ing: any) =>
-        ing.metadata.labels &&
-        ing.metadata.labels['cloud.sealos.io/app-deploy-manager'] &&
-        ing.metadata.labels['cloud.sealos.io/app-deploy-manager'].startsWith(`${k8sProjectName}-agentruntime-`)
+      const projectIngresses = ingressItems.filter(
+        (ing: any) =>
+          ing.metadata.labels &&
+          ing.metadata.labels['cloud.sealos.io/app-deploy-manager'] &&
+          ing.metadata.labels['cloud.sealos.io/app-deploy-manager'].startsWith(
+            `${k8sProjectName}-agentruntime-`
+          )
       );
 
       for (const ingress of projectIngresses) {
         try {
           await this.k8sNetworkingApi.deleteNamespacedIngress({
             name: ingress.metadata.name,
-            namespace
+            namespace,
           });
           console.log(`Deleted ingress: ${ingress.metadata.name}`);
         } catch (error) {
@@ -844,16 +908,17 @@ export class KubernetesService {
       try {
         const configMaps = await this.k8sApi.listNamespacedConfigMap({ namespace });
         const configMapItems = configMaps.body?.items || (configMaps as any).items || [];
-        const projectConfigMaps = configMapItems.filter((cm: any) =>
-          cm.metadata.name.startsWith(`${k8sProjectName}-agentruntime-`) &&
-          (cm.metadata.name.endsWith('-kubeconfig') || cm.metadata.name.endsWith('-claude-md'))
+        const projectConfigMaps = configMapItems.filter(
+          (cm: any) =>
+            cm.metadata.name.startsWith(`${k8sProjectName}-agentruntime-`) &&
+            (cm.metadata.name.endsWith('-kubeconfig') || cm.metadata.name.endsWith('-claude-md'))
         );
 
         for (const configMap of projectConfigMaps) {
           try {
             await this.k8sApi.deleteNamespacedConfigMap({
               name: configMap.metadata.name,
-              namespace
+              namespace,
             });
             console.log(`Deleted ConfigMap: ${configMap.metadata.name}`);
           } catch (error) {
@@ -863,7 +928,6 @@ export class KubernetesService {
       } catch (error) {
         console.error('Failed to list or delete ConfigMaps:', error);
       }
-
     } catch (error) {
       console.error('Failed to delete sandbox resources:', error);
     }
@@ -874,7 +938,10 @@ export class KubernetesService {
 
     try {
       // Convert project name to k8s-compatible format
-      const k8sProjectName = projectName.toLowerCase().replace(/[^a-z0-9-]/g, '').substring(0, 20);
+      const k8sProjectName = projectName
+        .toLowerCase()
+        .replace(/[^a-z0-9-]/g, '')
+        .substring(0, 20);
 
       // Find StatefulSet with new naming pattern
       const statefulSets = await this.k8sAppsApi.listNamespacedStatefulSet({ namespace });
@@ -906,7 +973,11 @@ export class KubernetesService {
     }
   }
 
-  async waitForDatabaseReady(clusterName: string, namespace?: string, timeoutMs: number = 120000): Promise<boolean> {
+  async waitForDatabaseReady(
+    clusterName: string,
+    namespace?: string,
+    timeoutMs: number = 120000
+  ): Promise<boolean> {
     namespace = namespace || this.getDefaultNamespace();
     const startTime = Date.now();
     const customObjectsApi = this.kc.makeApiClient(k8s.CustomObjectsApi);
@@ -921,7 +992,7 @@ export class KubernetesService {
           version: 'v1alpha1',
           namespace: namespace,
           plural: 'clusters',
-          name: clusterName
+          name: clusterName,
         });
 
         const clusterObj = cluster.body || cluster;
@@ -942,10 +1013,10 @@ export class KubernetesService {
         }
 
         // Wait 3 seconds before checking again
-        await new Promise(resolve => setTimeout(resolve, 3000));
+        await new Promise((resolve) => setTimeout(resolve, 3000));
       } catch (error) {
         console.log(`⏳ Cluster not found yet, continuing to wait...`);
-        await new Promise(resolve => setTimeout(resolve, 3000));
+        await new Promise((resolve) => setTimeout(resolve, 3000));
       }
     }
 
@@ -953,11 +1024,18 @@ export class KubernetesService {
     return false;
   }
 
-  async updateStatefulSetEnvVars(projectName: string, namespace: string, envVars: Record<string, string>) {
+  async updateStatefulSetEnvVars(
+    projectName: string,
+    namespace: string,
+    envVars: Record<string, string>
+  ) {
     namespace = namespace || this.getDefaultNamespace();
 
     // Convert project name to k8s-compatible format
-    const k8sProjectName = projectName.toLowerCase().replace(/[^a-z0-9-]/g, '').substring(0, 20);
+    const k8sProjectName = projectName
+      .toLowerCase()
+      .replace(/[^a-z0-9-]/g, '')
+      .substring(0, 20);
 
     try {
       // Find the StatefulSet for this project
@@ -979,7 +1057,7 @@ export class KubernetesService {
 
       if (fs.existsSync(claudeEnvPath)) {
         const envContent = fs.readFileSync(claudeEnvPath, 'utf-8');
-        envContent.split('\n').forEach(line => {
+        envContent.split('\n').forEach((line) => {
           if (line.startsWith('#') || !line.includes('=')) return;
 
           let cleanLine = line.replace(/^export\s+/, '');
@@ -1058,7 +1136,10 @@ export class KubernetesService {
     namespace = namespace || this.getDefaultNamespace();
 
     // Convert project name to k8s-compatible format
-    const k8sProjectName = projectName.toLowerCase().replace(/[^a-z0-9-]/g, '').substring(0, 20);
+    const k8sProjectName = projectName
+      .toLowerCase()
+      .replace(/[^a-z0-9-]/g, '')
+      .substring(0, 20);
     console.log(`🔍 Getting database secret for project: ${projectName} (k8s: ${k8sProjectName})`);
 
     // For KubeBlocks clusters, we need to find the cluster by project name
@@ -1069,7 +1150,7 @@ export class KubernetesService {
         group: 'apps.kubeblocks.io',
         version: 'v1alpha1',
         namespace: namespace,
-        plural: 'clusters'
+        plural: 'clusters',
       });
 
       // CRITICAL FIX: The response structure varies by client version
@@ -1077,7 +1158,8 @@ export class KubernetesService {
       const clusterList = clusters.body || clusters;
       const clusterItems = (clusterList as any)?.items || [];
 
-      console.log(`🗄️ KubeBlocks clusters response:`,
+      console.log(
+        `🗄️ KubeBlocks clusters response:`,
         clusters.body ? 'has body property' : 'no body property',
         clusterList ? 'has cluster list' : 'no cluster list',
         clusterItems.length > 0 ? `${clusterItems.length} items` : 'no items',
@@ -1085,7 +1167,11 @@ export class KubernetesService {
       );
 
       if (!Array.isArray(clusterItems)) {
-        console.error(`❌ Expected clusters.body.items to be an array, got:`, typeof clusterItems, clusterItems);
+        console.error(
+          `❌ Expected clusters.body.items to be an array, got:`,
+          typeof clusterItems,
+          clusterItems
+        );
         throw new Error(`Invalid API response: expected items array, got ${typeof clusterItems}`);
       }
 
@@ -1096,21 +1182,23 @@ export class KubernetesService {
 
       // Fallback: Try simple project name pattern
       if (!projectCluster) {
-        projectCluster = clusterItems.find((cluster: any) =>
-          cluster?.metadata?.name === k8sProjectName
+        projectCluster = clusterItems.find(
+          (cluster: any) => cluster?.metadata?.name === k8sProjectName
         );
       }
 
       // Fallback: Try exact project name match (for original project names)
       if (!projectCluster && projectName !== k8sProjectName) {
-        projectCluster = clusterItems.find((cluster: any) =>
-          cluster?.metadata?.name === projectName
+        projectCluster = clusterItems.find(
+          (cluster: any) => cluster?.metadata?.name === projectName
         );
       }
 
       if (!projectCluster) {
         const availableClusters = clusterItems.map((c: any) => c?.metadata?.name).join(', ');
-        throw new Error(`No database cluster found for project ${projectName} (k8s name: ${k8sProjectName}). Available clusters: ${availableClusters}`);
+        throw new Error(
+          `No database cluster found for project ${projectName} (k8s name: ${k8sProjectName}). Available clusters: ${availableClusters}`
+        );
       }
 
       const clusterName = projectCluster.metadata.name;
@@ -1166,13 +1254,18 @@ export class KubernetesService {
 
     try {
       // Convert project name to k8s-compatible format
-      const k8sProjectName = projectName.toLowerCase().replace(/[^a-z0-9-]/g, '').substring(0, 20);
+      const k8sProjectName = projectName
+        .toLowerCase()
+        .replace(/[^a-z0-9-]/g, '')
+        .substring(0, 20);
       console.log(`⏸️ Stopping sandbox for project: ${projectName} (k8s: ${k8sProjectName})`);
 
       // Find the StatefulSet for this project
       const statefulSets = await this.k8sAppsApi.listNamespacedStatefulSet({ namespace });
       const statefulSetItems = (statefulSets as any).body?.items || statefulSets.items || [];
-      console.log(`🔍 Looking for StatefulSets matching: ${k8sProjectName}-agentruntime-* in namespace ${namespace}`);
+      console.log(
+        `🔍 Looking for StatefulSets matching: ${k8sProjectName}-agentruntime-* in namespace ${namespace}`
+      );
       console.log(`📋 Found ${statefulSetItems.length} StatefulSets total:`);
       statefulSetItems.forEach((sts: any) => {
         console.log(`  - ${sts.metadata.name} (${sts.spec.replicas} replicas)`);
@@ -1192,14 +1285,14 @@ export class KubernetesService {
         ...projectStatefulSet,
         spec: {
           ...projectStatefulSet.spec,
-          replicas: 0
-        }
+          replicas: 0,
+        },
       };
 
       await this.k8sAppsApi.replaceNamespacedStatefulSet({
         name: statefulSetName,
         namespace,
-        body: updatedStatefulSet
+        body: updatedStatefulSet,
       });
 
       console.log(`✅ Stopped StatefulSet: ${statefulSetName} (scaled to 0 replicas)`);
@@ -1214,7 +1307,10 @@ export class KubernetesService {
 
     try {
       // Convert project name to k8s-compatible format
-      const k8sProjectName = projectName.toLowerCase().replace(/[^a-z0-9-]/g, '').substring(0, 20);
+      const k8sProjectName = projectName
+        .toLowerCase()
+        .replace(/[^a-z0-9-]/g, '')
+        .substring(0, 20);
       console.log(`▶️ Starting sandbox for project: ${projectName} (k8s: ${k8sProjectName})`);
 
       // Find the StatefulSet for this project
@@ -1236,9 +1332,9 @@ export class KubernetesService {
         namespace,
         body: {
           spec: {
-            replicas: 1
-          }
-        }
+            replicas: 1,
+          },
+        },
       });
 
       console.log(`✅ Started StatefulSet: ${statefulSetName} (scaled to 1 replica)`);
