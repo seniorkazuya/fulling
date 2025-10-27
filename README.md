@@ -156,7 +156,10 @@ Place your kubeconfig file in `.secret/kubeconfig`
 
 Create `.secret/.env` file with your Anthropic API credentials:
 ```env
-ANTHROPIC_API_KEY="your-anthropic-api-key"
+ANTHROPIC_AUTH_TOKEN="your-anthropic-api-key"
+ANTHROPIC_BASE_URL="your-anthropic-api-url"
+
+CLAUDE_AUTO_STARTED=0
 ```
 
 6. Initialize the database:
