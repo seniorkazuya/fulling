@@ -76,7 +76,7 @@ Generated changelogs should include:
 
 ## File Organization
 
-Save generated changelogs to: `claude-instructions/changelogs/v{VERSION}-{FEATURE-NAME}.md`
+Save generated changelogs to: `docs/changelogs/v{VERSION}-{FEATURE-NAME}.md`
 
 ## Writing Guidelines
 
