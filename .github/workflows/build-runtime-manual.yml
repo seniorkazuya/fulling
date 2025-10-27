@@ -1,4 +1,4 @@
-name: Manual Build Runtime v0.0.1-alpha.10
+name: Manual Build Runtime v0.0.1-alpha.11
 
 on:
   workflow_dispatch:
@@ -11,7 +11,7 @@ on:
 env:
   DOCKER_REGISTRY: docker.io
   IMAGE_NAME: fullstackagent/fullstack-web-runtime
-  IMAGE_TAG: v0.0.1-alpha.10
+  IMAGE_TAG: v0.0.1-alpha.11
 
 jobs:
   build-and-push:
@@ -43,7 +43,7 @@ jobs:
           push: true
           tags: |
             ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
-            ${{ env.IMAGE_NAME }}:0.0.1-alpha.10
+            ${{ env.IMAGE_NAME }}:0.0.1-alpha.11
             ${{ env.IMAGE_NAME }}:0.0.1
             ${{ env.IMAGE_NAME }}:latest
           labels: |
