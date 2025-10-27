@@ -5,15 +5,15 @@
 
 const VERSIONS = {
   // Runtime container image version
-  RUNTIME_IMAGE: 'fullstackagent/fullstack-web-runtime:v0.0.1-alpha.10',
-} as const;
+  RUNTIME_IMAGE: 'fullstackagent/fullstack-web-runtime:v0.0.1-alpha.11',
+} as const
 
 /**
  * Get the current runtime image with tag
  * @returns The full image name with tag
  */
 export function getRuntimeImage(): string {
-  return VERSIONS.RUNTIME_IMAGE;
+  return VERSIONS.RUNTIME_IMAGE
 }
 
 /**
@@ -21,7 +21,7 @@ export function getRuntimeImage(): string {
  * @returns The image name without version tag
  */
 export function getRuntimeImageName(): string {
-  return VERSIONS.RUNTIME_IMAGE.split(':')[0];
+  return VERSIONS.RUNTIME_IMAGE.split(':')[0]
 }
 
 /**
@@ -29,5 +29,5 @@ export function getRuntimeImageName(): string {
  * @returns The version tag
  */
 export function getRuntimeImageTag(): string {
-  return VERSIONS.RUNTIME_IMAGE.split(':')[1] || 'latest';
+  return VERSIONS.RUNTIME_IMAGE.split(':')[1] || 'latest'
 }
