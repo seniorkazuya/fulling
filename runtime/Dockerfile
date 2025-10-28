@@ -67,7 +67,8 @@ RUN npm install -g \
     postcss
 
 # Set up a non-root user for better security (must be before creating user-specific directories)
-RUN useradd -m -s /bin/bash agent && \
+RUN groupadd -g 1001 agent && \
+    useradd -u 1001 -g 1001 -m -s /bin/bash agent && \
     echo 'agent ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
 
 # Install Buildah and related container tools for unprivileged operation
@@ -146,7 +147,7 @@ WORKDIR /home/agent
 
 # Copy entrypoint script and bash configuration
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
-COPY .bashrc /home/agent/.bashrc
+COPY .bashrc /etc/skel/.bashrc
 RUN chmod +x /usr/local/bin/entrypoint.sh
 
 # Set default user to agent
