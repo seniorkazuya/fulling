@@ -508,11 +508,84 @@ export class KubernetesService {
             },
           },
           spec: {
+            // initContainer to set permissions and copy files
+            initContainers: [
+              {
+                name: 'init-home-directory',
+                image: getRuntimeImage(),
+                command: ['sh', '-c'],
+                args: [
+                  (() => {
+                    const commands = [
+                      // Create the necessary directory structure
+                      'mkdir -p /home/agent/.kube /home/agent/.config',
+
+                      // Copy .bashrc (from a location in the image that won't be overridden by mounts)
+                      'cp /etc/skel/.bashrc /home/agent/.bashrc',
+                      'chmod 644 /home/agent/.bashrc',
+                    ]
+
+                    // Copy kubeconfig
+                    if (kubeconfigContent) {
+                      commands.push(
+                        'cp /tmp/kubeconfig/kubeconfig /home/agent/.kube/config',
+                        'chmod 600 /home/agent/.kube/config'
+                      )
+                    } else {
+                      commands.push('touch /home/agent/.kube/config')
+                    }
+
+                    // Copy CLAUDE.md
+                    if (claudeMdContent) {
+                      commands.push(
+                        'cp /tmp/claude-md/CLAUDE.md /home/agent/CLAUDE.md',
+                        'chmod 644 /home/agent/CLAUDE.md'
+                      )
+                    }
+
+                    // Set ownership and permissions
+                    commands.push(
+                      'chown -R 1001:1001 /home/agent',
+                      'chmod 755 /home/agent',
+                      'echo "Home directory initialization completed"'
+                    )
+
+                    return commands.join(' && ')
+                  })(),
+                ],
+                volumeMounts: [
+                  {
+                    name: 'vn-homevn-agent',
+                    mountPath: '/home/agent',
+                  },
+                  ...(kubeconfigContent
+                    ? [
+                        {
+                          name: 'kubeconfig-volume',
+                          mountPath: '/tmp/kubeconfig',
+                        },
+                      ]
+                    : []),
+                  ...(claudeMdContent
+                    ? [
+                        {
+                          name: 'claude-md-volume',
+                          mountPath: '/tmp/claude-md',
+                        },
+                      ]
+                    : []),
+                ],
+                securityContext: {
+                  runAsUser: 0, // initContainer needs root privileges to chown
+                  runAsNonRoot: false,
+                },
+              },
+            ],
             automountServiceAccountToken: false,
             terminationGracePeriodSeconds: 10,
             securityContext: {
-              fsGroup: 1001, // Group ownership for mounted volumes (matches agent user GID)
-              runAsUser: 1001, // Explicit UID for agent user
+              fsGroup: 1001, // Group ownership for mounted volumes
+              runAsUser: 1001, // Run as agent user
               runAsNonRoot: true, // Security best practice
             },
             containers: [
@@ -543,63 +616,11 @@ export class KubernetesService {
                   },
                 ],
                 imagePullPolicy: 'Always',
-                lifecycle: {
-                  postStart: {
-                    exec: {
-                      command: (() => {
-                        const commands = []
-
-                        // Handle kubeconfig
-                        if (kubeconfigContent) {
-                          commands.push(
-                            'mkdir -p /home/agent/.kube && cp /tmp/kubeconfig/kubeconfig /home/agent/.kube/config'
-                          )
-                        }
-
-                        // Handle CLAUDE.md
-                        if (claudeMdContent) {
-                          commands.push('cp /tmp/claude-md/CLAUDE.md /home/agent/CLAUDE.md')
-                        }
-
-                        // Fallbacks for missing files
-                        if (!kubeconfigContent && !claudeMdContent) {
-                          commands.push(
-                            'mkdir -p /home/agent/.kube && touch /home/agent/.kube/config'
-                          )
-                        } else if (!kubeconfigContent && claudeMdContent) {
-                          commands.push(
-                            'mkdir -p /home/agent/.kube && touch /home/agent/.kube/config'
-                          )
-                        } else if (kubeconfigContent && !claudeMdContent) {
-                          // kubeconfig already handled, no additional fallback needed
-                        }
-
-                        return ['sh', '-c', commands.join(' && ')]
-                      })(),
-                    },
-                  },
-                },
                 volumeMounts: [
                   {
                     name: 'vn-homevn-agent',
                     mountPath: '/home/agent',
                   },
-                  ...(kubeconfigContent
-                    ? [
-                        {
-                          name: 'kubeconfig-volume',
-                          mountPath: '/tmp/kubeconfig',
-                        },
-                      ]
-                    : []),
-                  ...(claudeMdContent
-                    ? [
-                        {
-                          name: 'claude-md-volume',
-                          mountPath: '/tmp/claude-md',
-                        },
-                      ]
-                    : []),
                 ],
                 // Let the container use its default command which should have ttyd configured
               },
