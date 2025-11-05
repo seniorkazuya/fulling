@@ -1,12 +1,14 @@
-"use client";
+'use client';
 
-import { useState, useEffect } from "react";
-import { useParams, useRouter } from "next/navigation";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { toast } from "sonner";
-import { Trash2, Plus, Save, Key } from "lucide-react";
+import { useEffect, useState } from 'react';
+import { Key, Plus, Save, Trash2 } from 'lucide-react';
+import { useParams, useRouter } from 'next/navigation';
+import { toast } from 'sonner';
+
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { GET, POST } from '@/lib/fetch-client';
 
 interface EnvVariable {
   id?: string;
@@ -29,22 +31,23 @@ export default function EnvironmentPage() {
 
   const fetchEnvironmentVariables = async () => {
     try {
-      const response = await fetch(`/api/projects/${projectId}/environment`);
-      const data = await response.json();
+      const data = await GET<{ general: EnvVariable[]; auth: EnvVariable[]; payment: EnvVariable[] }>(
+        `/api/projects/${projectId}/environment`
+      );
 
       // Load all general environment variables
       const generalVars = data.general || [];
       setEnvVars(generalVars);
-      setLoading(false);
     } catch (error) {
-      console.error("Error fetching environment variables:", error);
-      toast.error("Failed to load environment variables");
+      console.error('Error fetching environment variables:', error);
+      toast.error('Failed to load environment variables');
+    } finally {
       setLoading(false);
     }
   };
 
   const addEnvVar = () => {
-    setEnvVars([...envVars, { key: "", value: "" }]);
+    setEnvVars([...envVars, { key: '', value: '' }]);
   };
 
   const removeEnvVar = (index: number) => {
@@ -61,26 +64,16 @@ export default function EnvironmentPage() {
     setSaving(true);
 
     // Only save general environment variables
-    const allVars: EnvVariable[] = envVars.filter(env => env.key && env.value);
+    const allVars: EnvVariable[] = envVars.filter((env) => env.key && env.value);
 
     try {
-      const response = await fetch(`/api/projects/${projectId}/environment`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ variables: allVars }),
-      });
+      await POST(`/api/projects/${projectId}/environment`, { variables: allVars });
 
-      if (!response.ok) {
-        throw new Error("Failed to save environment variables");
-      }
-
-      toast.success("Environment variables saved successfully");
+      toast.success('Environment variables saved successfully');
       router.push(`/projects/${projectId}`);
     } catch (error) {
-      console.error("Error saving environment variables:", error);
-      toast.error("Failed to save environment variables");
+      console.error('Error saving environment variables:', error);
+      toast.error('Failed to save environment variables');
     } finally {
       setSaving(false);
     }
@@ -99,7 +92,9 @@ export default function EnvironmentPage() {
       <div className="container mx-auto py-8 px-4">
         <div className="mb-8">
           <h1 className="text-3xl font-bold mb-2">Environment Variables</h1>
-          <p className="text-gray-400">Configure custom environment variables for your application</p>
+          <p className="text-gray-400">
+            Configure custom environment variables for your application
+          </p>
         </div>
 
         <Card className="bg-gray-900 border-gray-800">
@@ -109,7 +104,8 @@ export default function EnvironmentPage() {
               Custom Environment Variables
             </CardTitle>
             <CardDescription className="text-gray-400">
-              Add your application-specific environment variables. For authentication and payment configurations, use their dedicated pages.
+              Add your application-specific environment variables. For authentication and payment
+              configurations, use their dedicated pages.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -118,13 +114,19 @@ export default function EnvironmentPage() {
                 <Input
                   placeholder="KEY"
                   value={env.key}
-                  onChange={(e) => updateEnvVar(index, "key", e.target.value.toUpperCase().replace(/[^A-Z0-9_]/g, '_'))}
+                  onChange={(e) =>
+                    updateEnvVar(
+                      index,
+                      'key',
+                      e.target.value.toUpperCase().replace(/[^A-Z0-9_]/g, '_')
+                    )
+                  }
                   className="bg-gray-800 border-gray-700 text-white font-mono col-span-4"
                 />
                 <Input
                   placeholder="Value"
                   value={env.value}
-                  onChange={(e) => updateEnvVar(index, "value", e.target.value)}
+                  onChange={(e) => updateEnvVar(index, 'value', e.target.value)}
                   className="bg-gray-800 border-gray-700 text-white col-span-7"
                 />
                 <Button
@@ -160,7 +162,7 @@ export default function EnvironmentPage() {
             className="bg-white text-black hover:bg-gray-200"
           >
             <Save className="mr-2 h-4 w-4" />
-            {saving ? "Saving..." : "Save Environment"}
+            {saving ? 'Saving...' : 'Save Environment'}
           </Button>
           <Button
             onClick={() => router.back()}

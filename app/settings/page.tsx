@@ -1,29 +1,31 @@
-import { auth } from "@/lib/auth";
-import { redirect } from "next/navigation";
-import { prisma } from "@/lib/db";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Save, Settings, Terminal, Database, Shield } from "lucide-react";
-import SettingsClient from "./settings-client";
+import { Database, Save, Settings, Shield, Terminal } from 'lucide-react';
+import { redirect } from 'next/navigation';
+
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Textarea } from '@/components/ui/textarea';
+import { auth } from '@/lib/auth';
+import { prisma } from '@/lib/db';
+
+import SettingsClient from './settings-client';
 
 export default async function SettingsPage() {
   const session = await auth();
 
-  if (!session || !session.user?.email) {
-    redirect("/login");
+  if (!session || !session.user?.id) {
+    redirect('/login');
   }
 
-  // Find user by email
+  // Find user by id
   const user = await prisma.user.findUnique({
-    where: { email: session.user.email },
+    where: { id: session.user.id },
   });
 
   if (!user) {
-    redirect("/login");
+    redirect('/login');
   }
 
   // Get user's projects for system prompt context
@@ -33,12 +35,11 @@ export default async function SettingsPage() {
       id: true,
       name: true,
       description: true,
-      environmentVariables: {
+      environments: {
         select: {
           key: true,
           value: true,
           category: true,
-          isSecret: true,
         },
       },
     },

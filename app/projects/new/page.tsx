@@ -1,52 +1,46 @@
-"use client";
+'use client';
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
+import { useState } from 'react';
+import { Loader2 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
+
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { POST } from '@/lib/fetch-client';
 
 export default function NewProjectPage() {
   const router = useRouter();
   const [isCreating, setIsCreating] = useState(false);
-  const [projectName, setProjectName] = useState("");
-  const [description, setDescription] = useState("");
+  const [projectName, setProjectName] = useState('');
+  const [description, setDescription] = useState('');
 
   const handleCreateProject = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!projectName.trim()) {
-      toast.error("Project name is required");
+      toast.error('Project name is required');
       return;
     }
 
     setIsCreating(true);
 
     try {
-      const response = await fetch("/api/projects", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          name: projectName,
-          description: description,
-        }),
+      const project = await POST<{ id: string; name: string }>('/api/projects', {
+        name: projectName,
+        description: description,
       });
 
-      if (!response.ok) {
-        throw new Error("Failed to create project");
-      }
+      toast.success('Project is being created! Redirecting...');
 
-      const project = await response.json();
-      toast.success("Project created successfully!");
-      router.push(`/projects/${project.id}`);
+      // Async creation - redirect immediately to projects list
+      // Project list page will show latest status via polling
+      router.push('/projects');
     } catch (error) {
-      console.error("Error creating project:", error);
-      toast.error("Failed to create project. Please try again.");
+      console.error('Error creating project:', error);
+      toast.error('Failed to create project. Please try again.');
       setIsCreating(false);
     }
   };
@@ -97,7 +91,7 @@ export default function NewProjectPage() {
                 className="bg-white text-black hover:bg-gray-200"
               >
                 {isCreating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {isCreating ? "Creating..." : "Create Project"}
+                {isCreating ? 'Creating...' : 'Create Project'}
               </Button>
               <Button
                 type="button"
