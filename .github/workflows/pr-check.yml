@@ -211,6 +211,9 @@ jobs:
             const commitSha = context.payload.pull_request.head.sha;
             const branchName = context.payload.pull_request.head.ref;
 
+            // Security: Sanitize branch name for safe display in Markdown
+            const safeBranchName = branchName.replace(/[`\[\]]/g, '\\$&');
+
             let allPassed = checkResult.lintConclusion === 'success' && checkResult.dockerConclusion === 'success';
             let emoji = allPassed ? '✅' : '❌';
             let status = allPassed ? 'Passed' : 'Failed';
@@ -247,7 +250,7 @@ jobs:
             }
 
             body += `**Commit:** \`${commitSha}\`\n`;
-            body += `**Branch:** \`${branchName}\`\n`;
+            body += `**Branch:** \`${safeBranchName}\`\n`;
 
             if (checkResult.lintUrl || checkResult.dockerUrl) {
               body += `\n**🔗 View Details:**\n`;
