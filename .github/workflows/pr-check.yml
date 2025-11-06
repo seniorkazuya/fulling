@@ -126,8 +126,7 @@ jobs:
     name: Comment PR Results
     runs-on: ubuntu-latest
     needs: [lint-and-build, docker-build-test]
-    # Only run for PRs from the same repository, not from forks (to avoid permission issues)
-    if: always() && github.event.pull_request.head.repo.full_name == github.repository
+    if: always()
     permissions:
       issues: write
       pull-requests: write
@@ -135,76 +134,89 @@ jobs:
     steps:
       - name: Comment on PR
         uses: actions/github-script@v7
+        continue-on-error: true
         with:
           script: |
-            // Security: Use context object instead of direct template injection to prevent script injection
-            const lintBuildResult = '${{ needs.lint-and-build.result }}';
-            const dockerResult = '${{ needs.docker-build-test.result }}';
-            const prNumber = context.payload.pull_request.number;
-            const commitSha = context.payload.pull_request.head.sha;
-            const branchName = context.payload.pull_request.head.ref;
+            try {
+              // Security: Use context object instead of direct template injection to prevent script injection
+              const lintBuildResult = '${{ needs.lint-and-build.result }}';
+              const dockerResult = '${{ needs.docker-build-test.result }}';
+              const prNumber = context.payload.pull_request.number;
+              const commitSha = context.payload.pull_request.head.sha;
+              const branchName = context.payload.pull_request.head.ref;
 
-            let allPassed = lintBuildResult === 'success' && dockerResult === 'success';
-            let emoji = allPassed ? '✅' : '❌';
-            let status = allPassed ? 'Passed' : 'Failed';
+              let allPassed = lintBuildResult === 'success' && dockerResult === 'success';
+              let emoji = allPassed ? '✅' : '❌';
+              let status = allPassed ? 'Passed' : 'Failed';
 
-            let body = `## ${emoji} PR Check Results: ${status}\n\n`;
-            body += `### Build Checks\n\n`;
-            body += `| Check | Status |\n`;
-            body += `|-------|--------|\n`;
-            body += `| Lint & Build | ${lintBuildResult === 'success' ? '✅ Passed' : '❌ Failed'} |\n`;
-            body += `| Docker Build | ${dockerResult === 'success' ? '✅ Passed' : '❌ Failed'} |\n\n`;
+              let body = `## ${emoji} PR Check Results: ${status}\n\n`;
+              body += `### Build Checks\n\n`;
+              body += `| Check | Status |\n`;
+              body += `|-------|--------|\n`;
+              body += `| Lint & Build | ${lintBuildResult === 'success' ? '✅ Passed' : '❌ Failed'} |\n`;
+              body += `| Docker Build | ${dockerResult === 'success' ? '✅ Passed' : '❌ Failed'} |\n\n`;
 
-            if (allPassed) {
-              body += `### ✨ Great work!\n\n`;
-              body += `All checks passed successfully. Your PR is ready for review.\n\n`;
-              body += `**Details:**\n`;
-              body += `- ✅ Code quality verified (linting passed)\n`;
-              body += `- ✅ Build successful\n`;
-              body += `- ✅ Docker image build verified (linux/amd64)\n`;
-            } else {
-              body += `### ⚠️ Action Required\n\n`;
-              body += `Some checks failed. Please review the errors and update your PR.\n\n`;
-              if (lintBuildResult !== 'success') {
-                body += `**Lint/Build Issues:**\n`;
-                body += `- Check the "Lint and Build Check" job for details\n`;
-                body += `- Fix linting errors with \`pnpm run lint:fix\`\n`;
-                body += `- Ensure the project builds locally with \`pnpm run build\`\n\n`;
+              if (allPassed) {
+                body += `### ✨ Great work!\n\n`;
+                body += `All checks passed successfully. Your PR is ready for review.\n\n`;
+                body += `**Details:**\n`;
+                body += `- ✅ Code quality verified (linting passed)\n`;
+                body += `- ✅ Build successful\n`;
+                body += `- ✅ Docker image build verified (linux/amd64)\n`;
+              } else {
+                body += `### ⚠️ Action Required\n\n`;
+                body += `Some checks failed. Please review the errors and update your PR.\n\n`;
+                if (lintBuildResult !== 'success') {
+                  body += `**Lint/Build Issues:**\n`;
+                  body += `- Check the "Lint and Build Check" job for details\n`;
+                  body += `- Fix linting errors with \`pnpm run lint:fix\`\n`;
+                  body += `- Ensure the project builds locally with \`pnpm run build\`\n\n`;
+                }
+                if (dockerResult !== 'success') {
+                  body += `**Docker Build Issues:**\n`;
+                  body += `- Check the "Docker Build Test" job for details\n`;
+                  body += `- Verify Dockerfile changes\n`;
+                  body += `- Test Docker build locally\n\n`;
+                }
               }
-              if (dockerResult !== 'success') {
-                body += `**Docker Build Issues:**\n`;
-                body += `- Check the "Docker Build Test" job for details\n`;
-                body += `- Verify Dockerfile changes\n`;
-                body += `- Test Docker build locally\n\n`;
-              }
-            }
 
-            body += `**Commit:** \`${commitSha}\`\n`;
-            body += `**Branch:** \`${branchName}\`\n`;
+              body += `**Commit:** \`${commitSha}\`\n`;
+              body += `**Branch:** \`${branchName}\`\n`;
 
-            const { data: comments } = await github.rest.issues.listComments({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: prNumber,
-            });
-
-            const botComment = comments.find(comment => 
-              comment.user.type === 'Bot' && 
-              comment.body.includes('PR Check Results')
-            );
-
-            if (botComment) {
-              await github.rest.issues.updateComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                comment_id: botComment.id,
-                body: body
-              });
-            } else {
-              await github.rest.issues.createComment({
+              const { data: comments } = await github.rest.issues.listComments({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 issue_number: prNumber,
-                body: body
               });
+
+              const botComment = comments.find(comment => 
+                comment.user.type === 'Bot' && 
+                comment.body.includes('PR Check Results')
+              );
+
+              if (botComment) {
+                await github.rest.issues.updateComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  comment_id: botComment.id,
+                  body: body
+                });
+                console.log('✅ Successfully updated existing PR comment');
+              } else {
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: prNumber,
+                  body: body
+                });
+                console.log('✅ Successfully created new PR comment');
+              }
+            } catch (error) {
+              if (error.status === 403) {
+                console.log('⚠️ Unable to comment on PR due to permissions. This is expected for PRs from forks.');
+                console.log('💡 To enable PR comments, ensure repository Actions settings have "Read and write permissions"');
+              } else {
+                console.error('❌ Error commenting on PR:', error.message);
+                throw error;
+              }
             }
