@@ -71,7 +71,7 @@ export const POST = withAuth<PostProjectResponse>(async (req, _context, session)
 
   // Generate K8s compatible names
   const k8sProjectName = KubernetesUtils.toK8sProjectName(name)
-  const randomSuffix = KubernetesUtils.generateRandomString(8)
+  const randomSuffix = KubernetesUtils.generateRandomString()
   const databaseName = `${k8sProjectName}-${randomSuffix}`
   const sandboxName = `${k8sProjectName}-${randomSuffix}`
 

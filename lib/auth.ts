@@ -5,6 +5,7 @@ import GitHub from 'next-auth/providers/github'
 
 import { prisma } from '@/lib/db'
 import { isJWTExpired, parseSealosJWT } from '@/lib/jwt'
+import { updateUserKubeconfig } from '@/lib/k8s/k8s-service-helper'
 import { logger as baseLogger } from '@/lib/logger'
 import { createAiproxyToken } from '@/lib/services/aiproxy'
 
@@ -161,25 +162,9 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             },
           })
 
-          // Update KUBECONFIG in UserConfig
-          await prisma.userConfig.upsert({
-            where: {
-              userId_key: {
-                userId: existingIdentity.user.id,
-                key: 'KUBECONFIG',
-              },
-            },
-            create: {
-              userId: existingIdentity.user.id,
-              key: 'KUBECONFIG',
-              value: sealosKubeconfig,
-              category: 'kc',
-              isSecret: true,
-            },
-            update: {
-              value: sealosKubeconfig,
-            },
-          })
+          // Update KUBECONFIG in UserConfig using helper function
+          // This will automatically clear the cached service instance
+          await updateUserKubeconfig(existingIdentity.user.id, sealosKubeconfig)
 
           // Create aiproxy token
           try {
@@ -252,20 +237,13 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             logger.error(`Failed to create aiproxy token for new user ${sealosUserId}: ${error}`)
           }
 
-          // Prepare configs array
+          // Prepare configs array (excluding KUBECONFIG, which will be set via updateUserKubeconfig)
           const configs: Array<{
             key: string
             value: string
             category: string
             isSecret: boolean
-          }> = [
-            {
-              key: 'KUBECONFIG',
-              value: sealosKubeconfig,
-              category: 'kc',
-              isSecret: true,
-            },
-          ]
+          }> = []
 
           // Add aiproxy configs if token was created successfully
           if (aiproxyTokenInfo?.token?.key && aiproxyTokenInfo.anthropicBaseUrl) {
@@ -302,6 +280,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
               },
             },
           })
+
+          // Set KUBECONFIG using helper function
+          // This will automatically clear the cached service instance
+          await updateUserKubeconfig(newUser.id, sealosKubeconfig)
 
           return {
             id: newUser.id,

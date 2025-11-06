@@ -5,9 +5,10 @@
   "scripts": {
     "prepare": "prisma generate",
     "dev": "next dev -H 0.0.0.0 -p 3000 --turbo",
-    "build": "next build",
+    "build": "prisma generate && next build",
     "start": "next start -H 0.0.0.0 -p 3000",
-    "lint": "eslint",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
     "prisma:format": "prisma format"
   },
   "dependencies": {

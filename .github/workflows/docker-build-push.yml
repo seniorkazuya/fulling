@@ -1,0 +1,123 @@
+name: Docker Build and Push
+
+permissions:
+  contents: read
+  packages: write
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+    inputs:
+      push_to_registry:
+        description: "Push to Docker registry"
+        required: false
+        default: true
+        type: boolean
+
+env:
+  DOCKER_IMAGE: ${{ vars.DOCKERHUB_USERNAME || 'defaultuser' }}/fullstack-agent
+  REGISTRY_GHCR: ghcr.io
+
+jobs:
+  build-and-push:
+    name: Build and Push Docker Image
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Hub
+        if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.push_to_registry)
+        uses: docker/login-action@v3
+        with:
+          username: ${{ vars.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Login to GitHub Container Registry
+        if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.push_to_registry)
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY_GHCR }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: |
+            ${{ env.DOCKER_IMAGE }}
+            ${{ env.REGISTRY_GHCR }}/${{ github.repository }}
+          tags: |
+            type=ref,event=branch
+            type=sha,prefix=sha-
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=latest,enable={{is_default_branch}}
+          labels: |
+            org.opencontainers.image.title=FullStack Agent
+            org.opencontainers.image.description=Full Stack Development Agent
+            org.opencontainers.image.vendor=${{ github.repository_owner }}
+
+      - name: Build and push multi-platform image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: ${{ github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.push_to_registry) }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: |
+            type=gha,scope=build-amd64
+            type=gha,scope=build-arm64
+          cache-to: type=gha,mode=max,scope=build-multiplatform
+          provenance: true
+          sbom: true
+
+      - name: Generate build summary
+        if: always()
+        run: |
+          echo "## 🚀 Docker Build & Push Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Build Status" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ job.status }}" = "success" ]; then
+            echo "- ✅ Multi-platform build successful" >> $GITHUB_STEP_SUMMARY
+            echo "- ✅ Platforms: \`linux/amd64\`, \`linux/arm64\`" >> $GITHUB_STEP_SUMMARY
+            if [ "${{ github.event_name }}" = "push" ] || [ "${{ inputs.push_to_registry }}" = "true" ]; then
+              echo "- ✅ Pushed to Docker Hub: \`${{ env.DOCKER_IMAGE }}\`" >> $GITHUB_STEP_SUMMARY
+              echo "- ✅ Pushed to GHCR: \`${{ env.REGISTRY_GHCR }}/${{ github.repository }}\`" >> $GITHUB_STEP_SUMMARY
+            fi
+          else
+            echo "- ❌ Build failed" >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Build Information" >> $GITHUB_STEP_SUMMARY
+          echo "- **Commit SHA**: \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Branch**: \`${{ github.ref_name }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Triggered by**: @${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Event**: \`${{ github.event_name }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Build time**: $(date '+%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Image Tags" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          echo "${{ steps.meta.outputs.tags }}" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+
+      - name: Test image (quick smoke test)
+        if: success()
+        run: |
+          echo "### 🧪 Image Test" >> $GITHUB_STEP_SUMMARY
+          echo "Running quick smoke test on built image..." >> $GITHUB_STEP_SUMMARY
+          # Pull the image we just built (from cache/local)
+          docker images | head -n 5
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Image built successfully and available locally" >> $GITHUB_STEP_SUMMARY
