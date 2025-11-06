@@ -31,14 +31,18 @@
     },
     "typescript.tsdk": "node_modules/typescript/lib",
     "cSpell.words": [
+        "aiporxy",
+        "AIPROXY",
         "clusterdefinition",
         "clusterversion",
         "fullstackagent",
         "kbcli",
         "kubeblocks",
         "Kubeconfig",
+        "NEXTAUTH",
         "nsid",
         "openebs",
-        "sealos"
+        "sealos",
+        "whatwg"
     ]
 }
