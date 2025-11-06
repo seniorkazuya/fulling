@@ -4,8 +4,9 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
   output: 'standalone',
   compress: true,
-  /* config options here */
-  serverExternalPackages: ['pino'],
+  // Exclude server-side packages from bundling
+  // @prisma/client must be external to work properly with binary engines
+  serverExternalPackages: ['pino', '@prisma/client'],
 }
 
 export default nextConfig
