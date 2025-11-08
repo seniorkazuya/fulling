@@ -197,31 +197,22 @@ WORKDIR /home/agent
 COPY --chmod=755 entrypoint.sh /usr/local/bin/entrypoint.sh
 COPY --chmod=644 .bashrc /etc/skel/.bashrc
 
-# -----------------------------------------------------------------------------
-# Create and configure /opt/next-template directory with proper permissions
-# Must be done as root before switching to agent user
-# -----------------------------------------------------------------------------
-RUN mkdir -p /opt/next-template \
-    && chown -R agent:agent /opt/next-template
-
 # =============================================================================
 # Stage 2: Next.js project template preparation
 # =============================================================================
 
-# Switch to non-root user for security and proper file ownership
-USER agent
+# Create Next.js template directly in /opt/next-template as root, then chown to agent
+# This is simpler and faster than creating in /tmp and moving
+# Root can safely run npm commands during image build (not runtime)
 
 # -----------------------------------------------------------------------------
-# Create Next.js project template at /opt/next-template
-# This template will be copied to /home/agent/next by InitContainer on first run
-# Reason: /home/agent will be mounted by PVC, so we need to store template elsewhere
+# Step 1: Create Next.js project directly in final location
 # -----------------------------------------------------------------------------
 RUN set -eux; \
-    # Create template directory (accessible by agent user)
-    mkdir -p /opt/next-template; \
-    cd /opt/next-template; \
-    # Initialize Next.js with all recommended settings
-    # IMPORTANT: --yes flag is required for non-interactive build (skips React Compiler, Turbopack prompts)
+    TEMPLATE_DIR="/opt/next-template"; \
+    mkdir -p "$TEMPLATE_DIR"; \
+    cd "$TEMPLATE_DIR"; \
+    echo "=== Creating Next.js project in $TEMPLATE_DIR ==="; \
     npx --yes create-next-app@latest . \
         --typescript \
         --tailwind \
@@ -232,24 +223,43 @@ RUN set -eux; \
         --use-pnpm \
         --disable-git \
         --yes; \
-    # Verify Next.js project was created successfully
-    if [ ! -f /opt/next-template/package.json ]; then \
-        echo "ERROR: Next.js creation failed - package.json not found"; \
-        ls -la /opt/next-template; \
+    echo "=== Verifying Next.js project ==="; \
+    ls -la "$TEMPLATE_DIR"; \
+    if [ ! -f "$TEMPLATE_DIR/package.json" ]; then \
+        echo "ERROR: package.json not found"; \
         exit 1; \
     fi; \
-    echo "✓ Next.js project created successfully"; \
-    # Initialize shadcn/ui with default configuration
+    echo "✓ Next.js project created successfully"
+
+# -----------------------------------------------------------------------------
+# Step 2: Install shadcn/ui components
+# -----------------------------------------------------------------------------
+RUN set -eux; \
+    TEMPLATE_DIR="/opt/next-template"; \
+    cd "$TEMPLATE_DIR"; \
+    echo "=== Initializing shadcn/ui ==="; \
     pnpm dlx shadcn@latest init -d -y; \
-    # Install all available shadcn/ui components
+    echo "=== Installing shadcn/ui components ==="; \
     pnpm dlx shadcn@latest add --all --yes; \
-    echo "✓ shadcn/ui components installed"; \
-    # Clean pnpm cache to reduce layer size
+    echo "✓ shadcn/ui installed"
+
+# -----------------------------------------------------------------------------
+# Step 3: Clean up and set ownership
+# -----------------------------------------------------------------------------
+RUN set -eux; \
+    TEMPLATE_DIR="/opt/next-template"; \
+    cd "$TEMPLATE_DIR"; \
+    echo "=== Cleaning up pnpm cache ==="; \
     pnpm store prune; \
-    # Final verification
-    echo "Verifying template contents:"; \
-    ls -la /opt/next-template; \
-    echo "✓ Next.js template created at /opt/next-template"
+    echo "=== Setting ownership to agent user (1001:1001) ==="; \
+    chown -R agent:agent "$TEMPLATE_DIR"; \
+    echo "=== Final verification ==="; \
+    ls -la "$TEMPLATE_DIR"; \
+    if [ ! -f "$TEMPLATE_DIR/package.json" ]; then \
+        echo "ERROR: Template verification failed"; \
+        exit 1; \
+    fi; \
+    echo "✓ Template ready at $TEMPLATE_DIR (owned by agent:agent)"
 
 # =============================================================================
 # Container Runtime Configuration
