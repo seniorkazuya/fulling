@@ -13,10 +13,10 @@
 Fulling provides a sandboxed environment with Claude Code and PostgreSQL — everything you need to vibe code full-stack apps.
 
 Fulling automatically sets up the following for your project, ready in a minute:
-• Next.js environment with shadcn/ui
-• Dedicated PostgreSQL (pre-configured)
-• Claude Code (pre-configured)
-• A live domain
+- Next.js environment with shadcn/ui
+- Dedicated PostgreSQL (pre-configured)
+- Claude Code (pre-configured)
+- A live domain
 
 <img width="1511" height="775" alt="image" src="https://github.com/user-attachments/assets/4683a22c-800b-45b7-91a3-6ed5114ea3c9" />
 
