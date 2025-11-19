@@ -8,28 +8,8 @@
 
 import { useState } from 'react';
 import type { Prisma } from '@prisma/client';
-import {
-  // ChevronDown,
-  // Loader2,
-  Network,
-  // Play,
-  Plus,
-  // Square,
-  Terminal as TerminalIcon,
-  // Trash2,
-  X,
-} from 'lucide-react';
+import { Copy, Eye, EyeOff, Network, Plus, Terminal as TerminalIcon, X } from 'lucide-react';
 
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
 import {
   Dialog,
   DialogContent,
@@ -37,15 +17,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-// import {
-//   DropdownMenu,
-//   DropdownMenuContent,
-//   DropdownMenuItem,
-//   DropdownMenuSeparator,
-//   DropdownMenuTrigger,
-// } from '@/components/ui/dropdown-menu';
-import { useProjectOperations } from '@/hooks/use-project-operations';
-import { getAvailableProjectActions } from '@/lib/util/action';
 import { getStatusBgClasses } from '@/lib/util/status-colors';
 import { cn } from '@/lib/utils';
 
@@ -78,6 +49,11 @@ export interface TerminalToolbarProps {
   onTabClose: (tabId: string) => void;
   /** Callback when new tab is added */
   onTabAdd: () => void;
+  /** FileBrowser credentials (optional) */
+  fileBrowserCredentials?: {
+    username: string;
+    password: string;
+  };
 }
 
 /**
@@ -91,27 +67,37 @@ export function TerminalToolbar({
   onTabSelect,
   onTabClose,
   onTabAdd,
+  fileBrowserCredentials,
 }: TerminalToolbarProps) {
   const [showNetworkDialog, setShowNetworkDialog] = useState(false);
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [copiedField, setCopiedField] = useState<string | null>(null);
 
-  const { executeOperation, loading } = useProjectOperations(project.id);
-
-  const availableActions = getAvailableProjectActions(project);
-
-  const handleDeleteClick = () => {
-    setShowDeleteDialog(true);
-  };
-
-  const handleDeleteConfirm = () => {
-    setShowDeleteDialog(false);
-    executeOperation('DELETE');
-  };
-
-  const networkEndpoints = [
-    { domain: sandbox?.publicUrl || '', port: 3000, protocol: 'HTTPS', label: 'Application' },
-    { domain: sandbox?.ttydUrl || '', port: 7681, protocol: 'HTTPS', label: 'Terminal' },
+  // Build network endpoints list, filtering out any without URLs
+  const allEndpoints = [
+    { domain: sandbox?.publicUrl, port: 3000, protocol: 'HTTPS', label: 'Application' },
+    { domain: sandbox?.ttydUrl, port: 7681, protocol: 'HTTPS', label: 'Terminal' },
+    {
+      domain: sandbox?.fileBrowserUrl,
+      port: 8080,
+      protocol: 'HTTPS',
+      label: 'File Browser',
+      hasCredentials: true,
+    },
   ];
+
+  // Only show endpoints that have a valid domain URL
+  const networkEndpoints = allEndpoints.filter(endpoint => endpoint.domain);
+
+  const copyToClipboard = async (text: string, field: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedField(field);
+      setTimeout(() => setCopiedField(null), 2000);
+    } catch (err) {
+      console.error('Failed to copy:', err);
+    }
+  };
 
   return (
     <>
@@ -170,53 +156,6 @@ export function TerminalToolbar({
             <Network className="h-3 w-3" />
             <span>Network</span>
           </button>
-
-          {/* Operations Dropdown */}
-          {/*<DropdownMenu> TODO: delete after Nov 18 */}
-          {/*  <DropdownMenuTrigger asChild>*/}
-          {/*    <button className="px-2 py-1 text-xs text-gray-300 hover:text-white hover:bg-[#37373d] rounded transition-colors flex items-center gap-1">*/}
-          {/*      <span>Operations</span>*/}
-          {/*      <ChevronDown className="h-3 w-3" />*/}
-          {/*    </button>*/}
-          {/*  </DropdownMenuTrigger>*/}
-          {/*  <DropdownMenuContent*/}
-          {/*    align="end"*/}
-          {/*    className="bg-[#252526] border-[#3e3e42] text-white min-w-[160px]"*/}
-          {/*  >*/}
-          {/*    {availableActions.includes('START') && (*/}
-          {/*      <DropdownMenuItem*/}
-          {/*        onClick={() => executeOperation('START')}*/}
-          {/*        disabled={loading !== null}*/}
-          {/*        className="text-xs cursor-pointer focus:bg-[#37373d] focus:text-white"*/}
-          {/*      >*/}
-          {/*        {loading === 'START' ? (*/}
-          {/*          <>*/}
-          {/*            <Loader2 className="mr-2 h-3 w-3 animate-spin" />*/}
-          {/*            Starting...*/}
-          {/*          </>*/}
-          {/*        ) : (*/}
-          {/*          <>*/}
-          {/*            <Play className="mr-2 h-3 w-3" />*/}
-          {/*            Start*/}
-          {/*          </>*/}
-          {/*        )}*/}
-          {/*      </DropdownMenuItem>*/}
-          {/*    )}*/}
-          {/*    {availableActions.includes('STOP') && (*/}
-          {/*      <DropdownMenuItem*/}
-          {/*        onClick={() => executeOperation('STOP')}*/}
-          {/*        disabled={loading !== null}*/}
-          {/*        className="text-xs cursor-pointer focus:bg-[#37373d] focus:text-white"*/}
-          {/*      >*/}
-          {/*        {loading === 'STOP' ? (*/}
-          {/*          <>*/}
-          {/*            <Loader2 className="mr-2 h-3 w-3 animate-spin" />*/}
-          {/*            Stopping...*/}
-          {/*          </>*/}
-          {/*        ) : (*/}
-          {/*          <>*/}
-          {/*            <Square className="mr-2 h-3 w-3" />*/}
-          {/*            Stop*/}
         </div>
       </div>
 
@@ -245,42 +184,80 @@ export function TerminalToolbar({
                   <span className="text-xs text-[#858585] font-mono">{endpoint.protocol}</span>
                 </div>
                 <a
-                  href={endpoint.domain}
+                  href={endpoint.domain || undefined}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-xs text-[#3794ff] hover:text-[#4fc1ff] break-all underline underline-offset-2 hover:underline-offset-4 transition-all"
                 >
                   {endpoint.domain}
                 </a>
+
+                {/* Show credentials for File Browser */}
+                {endpoint.hasCredentials && fileBrowserCredentials && (
+                  <div className="mt-3 pt-3 border-t border-[#3e3e42] space-y-2">
+                    <div className="text-xs text-gray-400 mb-1.5">Login Credentials:</div>
+
+                    {/* Username */}
+                    <div className="flex items-center gap-2 bg-[#252526] rounded p-2 border border-[#3e3e42]">
+                      <div className="flex-1 min-w-0">
+                        <div className="text-[10px] text-gray-500 mb-0.5">Username</div>
+                        <code className="text-xs text-blue-400 break-all">
+                          {fileBrowserCredentials.username}
+                        </code>
+                      </div>
+                      <button
+                        onClick={() => copyToClipboard(fileBrowserCredentials.username, 'username')}
+                        className="p-1.5 hover:bg-[#37373d] rounded transition-colors shrink-0"
+                        title="Copy username"
+                      >
+                        {copiedField === 'username' ? (
+                          <span className="text-xs text-green-400">✓</span>
+                        ) : (
+                          <Copy className="h-3.5 w-3.5 text-gray-400" />
+                        )}
+                      </button>
+                    </div>
+
+                    {/* Password */}
+                    <div className="flex items-center gap-2 bg-[#252526] rounded p-2 border border-[#3e3e42]">
+                      <div className="flex-1 min-w-0">
+                        <div className="text-[10px] text-gray-500 mb-0.5">Password</div>
+                        <code className="text-xs text-blue-400 break-all">
+                          {showPassword
+                            ? fileBrowserCredentials.password
+                            : '••••••••••••••••'}
+                        </code>
+                      </div>
+                      <button
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="p-1.5 hover:bg-[#37373d] rounded transition-colors shrink-0"
+                        title={showPassword ? 'Hide password' : 'Show password'}
+                      >
+                        {showPassword ? (
+                          <EyeOff className="h-3.5 w-3.5 text-gray-400" />
+                        ) : (
+                          <Eye className="h-3.5 w-3.5 text-gray-400" />
+                        )}
+                      </button>
+                      <button
+                        onClick={() => copyToClipboard(fileBrowserCredentials.password, 'password')}
+                        className="p-1.5 hover:bg-[#37373d] rounded transition-colors shrink-0"
+                        title="Copy password"
+                      >
+                        {copiedField === 'password' ? (
+                          <span className="text-xs text-green-400">✓</span>
+                        ) : (
+                          <Copy className="h-3.5 w-3.5 text-gray-400" />
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             ))}
           </div>
         </DialogContent>
       </Dialog>
-
-      {/* Delete Confirmation Dialog */}
-      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <AlertDialogContent className="bg-[#252526] border-[#3e3e42] text-white">
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Project</AlertDialogTitle>
-            <AlertDialogDescription className="text-gray-400">
-              Are you sure you want to delete this project? This will terminate all resources
-              (databases, sandboxes) and cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel className="bg-[#3e3e42] border-[#3e3e42] text-white hover:bg-[#4e4e52]">
-              Cancel
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDeleteConfirm}
-              className="bg-red-600 hover:bg-red-700 text-white"
-            >
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </>
   );
 }

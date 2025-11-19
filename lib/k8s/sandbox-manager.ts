@@ -20,6 +20,8 @@ export interface SandboxInfo {
   publicUrl: string
   /** Terminal access URL */
   ttydUrl: string
+  /** File browser access URL */
+  fileBrowserUrl: string
 }
 
 /**
@@ -127,11 +129,15 @@ export class SandboxManager {
     const ttydAccessToken = envVars['TTYD_ACCESS_TOKEN']
     const ttydUrl = ttydAccessToken ? `${baseTtydUrl}?arg=${ttydAccessToken}` : baseTtydUrl
 
+    // Build fileBrowserUrl (no token in URL, uses standard login)
+    const fileBrowserUrl = `https://${sandboxName}-filebrowser.${ingressDomain}`
+
     return {
       statefulSetName: sandboxName,
       serviceName: serviceName,
       publicUrl: `https://${sandboxName}-app.${ingressDomain}`,
       ttydUrl: ttydUrl,
+      fileBrowserUrl: fileBrowserUrl,
     }
   }
 
@@ -544,6 +550,13 @@ export class SandboxManager {
   }
 
   /**
+   * Get FileBrowser Ingress name
+   */
+  private getFileBrowserIngressName(sandboxName: string): string {
+    return `${sandboxName}-filebrowser-ingress`
+  }
+
+  /**
    * Find StatefulSet by exact match
    *
    * @param sandboxName - Sandbox name
@@ -691,8 +704,91 @@ export class SandboxManager {
                   },
                 ],
               },
+              {
+                name: 'filebrowser',
+                image: 'filebrowser/filebrowser:latest',
+                command: ['/bin/sh', '-c'],
+                args: [
+                  `
+set -e
+
+echo "=== FileBrowser Initialization ==="
+
+# Only initialize if database doesn't exist
+if [ ! -f /database/filebrowser.db ]; then
+  echo "→ Database not found, initializing..."
+
+  # Initialize config and database
+  filebrowser config init \
+    --database /database/filebrowser.db \
+    --root /srv \
+    --address 0.0.0.0 \
+    --port 8080
+
+  echo "✓ Config initialized"
+
+  # Add user with plaintext password (filebrowser will hash it)
+  filebrowser users add "$FILE_BROWSER_USERNAME" "$FILE_BROWSER_PASSWORD" \
+    --database /database/filebrowser.db \
+    --perm.admin
+
+  echo "✓ User created: $FILE_BROWSER_USERNAME"
+else
+  echo "✓ Database already exists, skipping initialization"
+fi
+
+echo "→ Starting FileBrowser..."
+# Start filebrowser
+exec filebrowser --database /database/filebrowser.db
+                  `.trim(),
+                ],
+                env: [
+                  {
+                    name: 'FILE_BROWSER_USERNAME',
+                    value: containerEnv['FILE_BROWSER_USERNAME'] || 'admin',
+                  },
+                  {
+                    name: 'FILE_BROWSER_PASSWORD',
+                    value: containerEnv['FILE_BROWSER_PASSWORD'] || 'admin',
+                  },
+                ],
+                ports: [{ containerPort: 8080, name: 'port-8080' }],
+                resources: {
+                  requests: {
+                    cpu: '50m',
+                    memory: '64Mi',
+                  },
+                  limits: {
+                    cpu: '500m',
+                    memory: '256Mi',
+                  },
+                },
+                volumeMounts: [
+                  {
+                    name: 'vn-homevn-agent',
+                    mountPath: '/srv',
+                  },
+                  {
+                    name: 'filebrowser-database',
+                    mountPath: '/database',
+                  },
+                  {
+                    name: 'filebrowser-config',
+                    mountPath: '/config',
+                  },
+                ],
+              },
             ],
-            volumes: [],
+            volumes: [
+              {
+                name: 'filebrowser-database',
+                emptyDir: {},
+              },
+              {
+                name: 'filebrowser-config',
+                emptyDir: {},
+              },
+            ],
           },
         },
         volumeClaimTemplates: [
@@ -908,6 +1004,7 @@ echo "=== Init Container: Completed successfully ==="
         ports: [
           { port: 3000, targetPort: 3000, name: 'port-3000', protocol: 'TCP' },
           { port: 7681, targetPort: 7681, name: 'port-7681', protocol: 'TCP' },
+          { port: 8080, targetPort: 8080, name: 'port-8080', protocol: 'TCP' },
         ],
         selector: {
           app: sandboxName,
@@ -919,7 +1016,7 @@ echo "=== Init Container: Completed successfully ==="
   }
 
   /**
-   * Create Ingresses (App and Ttyd) - idempotent
+   * Create Ingresses (App, Ttyd, and FileBrowser) - idempotent
    */
   private async createIngresses(
     sandboxName: string,
@@ -930,6 +1027,7 @@ echo "=== Init Container: Completed successfully ==="
   ): Promise<void> {
     const appIngressName = this.getAppIngressName(sandboxName)
     const ttydIngressName = this.getTtydIngressName(sandboxName)
+    const fileBrowserIngressName = this.getFileBrowserIngressName(sandboxName)
 
     const appIngress = this.createAppIngress(
       sandboxName,
@@ -945,10 +1043,18 @@ echo "=== Init Container: Completed successfully ==="
       serviceName,
       ingressDomain
     )
+    const fileBrowserIngress = this.createFileBrowserIngress(
+      sandboxName,
+      k8sProjectName,
+      namespace,
+      serviceName,
+      ingressDomain
+    )
 
     await Promise.all([
       this.createIngressIfNotExists(appIngressName, namespace, appIngress),
       this.createIngressIfNotExists(ttydIngressName, namespace, ttydIngress),
+      this.createIngressIfNotExists(fileBrowserIngressName, namespace, fileBrowserIngress),
     ])
   }
 
@@ -1107,6 +1213,84 @@ echo "=== Init Container: Completed successfully ==="
   }
 
   /**
+   * Create FileBrowser Ingress
+   */
+  private createFileBrowserIngress(
+    sandboxName: string,
+    k8sProjectName: string,
+    namespace: string,
+    serviceName: string,
+    ingressDomain: string
+  ): k8s.V1Ingress {
+    const ingressName = this.getFileBrowserIngressName(sandboxName)
+    const host = `${sandboxName}-filebrowser.${ingressDomain}`
+
+    return {
+      apiVersion: 'networking.k8s.io/v1',
+      kind: 'Ingress',
+      metadata: {
+        name: ingressName,
+        namespace,
+        labels: {
+          'cloud.sealos.io/app-deploy-manager': sandboxName,
+          'cloud.sealos.io/app-deploy-manager-domain': `${sandboxName}-filebrowser`,
+          'project.fullstackagent.io/name': k8sProjectName,
+        },
+        annotations: {
+          'kubernetes.io/ingress.class': 'nginx',
+          'nginx.ingress.kubernetes.io/proxy-body-size': '32m',
+          'nginx.ingress.kubernetes.io/ssl-redirect': 'false',
+          'nginx.ingress.kubernetes.io/backend-protocol': 'HTTP',
+          'nginx.ingress.kubernetes.io/client-body-buffer-size': '64k',
+          'nginx.ingress.kubernetes.io/proxy-buffer-size': '64k',
+          'nginx.ingress.kubernetes.io/proxy-send-timeout': '300',
+          'nginx.ingress.kubernetes.io/proxy-read-timeout': '300',
+          // CORS configuration for TUS resumable file uploads from browser
+          'nginx.ingress.kubernetes.io/enable-cors': 'true',
+          'nginx.ingress.kubernetes.io/cors-allow-origin': '*',
+          'nginx.ingress.kubernetes.io/cors-allow-methods':
+            'GET, POST, PUT, DELETE, PATCH, HEAD, OPTIONS',
+          'nginx.ingress.kubernetes.io/cors-allow-headers':
+            'DNT,Keep-Alive,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range,Authorization,X-Auth,Upload-Length,Upload-Offset,Tus-Resumable,Upload-Metadata,Upload-Defer-Length,Upload-Concat',
+          'nginx.ingress.kubernetes.io/cors-expose-headers':
+            'Upload-Offset,Location,Upload-Length,Tus-Version,Tus-Resumable,Tus-Max-Size,Tus-Extension,Upload-Metadata',
+          'nginx.ingress.kubernetes.io/cors-allow-credentials': 'true',
+          'nginx.ingress.kubernetes.io/cors-max-age': '1728000',
+          'nginx.ingress.kubernetes.io/server-snippet':
+            'client_header_buffer_size 64k;\nlarge_client_header_buffers 4 128k;',
+        },
+      },
+      spec: {
+        rules: [
+          {
+            host,
+            http: {
+              paths: [
+                {
+                  pathType: 'Prefix',
+                  path: '/',
+                  backend: {
+                    service: {
+                      name: serviceName,
+                      port: { number: 8080 },
+                    },
+                  },
+                },
+              ],
+            },
+          },
+        ],
+        tls: [
+          {
+            hosts: [host],
+            secretName: 'wildcard-cert',
+          },
+        ],
+      },
+    }
+  }
+
+  /**
    * Delete StatefulSet (exact deletion)
    */
   private async deleteStatefulSet(sandboxName: string, namespace: string): Promise<void> {
@@ -1150,15 +1334,17 @@ echo "=== Init Container: Completed successfully ==="
   }
 
   /**
-   * Delete Ingresses (exact deletion of App and Ttyd Ingress)
+   * Delete Ingresses (exact deletion of App, Ttyd, and FileBrowser Ingress)
    */
   private async deleteIngresses(sandboxName: string, namespace: string): Promise<void> {
     const appIngressName = this.getAppIngressName(sandboxName)
     const ttydIngressName = this.getTtydIngressName(sandboxName)
+    const fileBrowserIngressName = this.getFileBrowserIngressName(sandboxName)
 
     await Promise.all([
       this.deleteIngress(appIngressName, namespace),
       this.deleteIngress(ttydIngressName, namespace),
+      this.deleteIngress(fileBrowserIngressName, namespace),
     ])
   }
 
@@ -1222,6 +1408,132 @@ echo "=== Init Container: Completed successfully ==="
       logger.error(`Failed to delete PVCs for sandbox: ${sandboxName} - ${errorMessage}`)
       // Don't throw - PVC deletion failure shouldn't block sandbox cleanup
       // The PVCs might have already been deleted by K8s retention policy
+    }
+  }
+
+  /**
+   * Get current working directory of a terminal session in sandbox
+   *
+   * Uses session ID to find the shell process via proc filesystem environ
+   * and reads its working directory from proc pid cwd
+   *
+   * @param namespace - Kubernetes namespace
+   * @param sandboxName - Sandbox StatefulSet name
+   * @param sessionId - Terminal session ID (from TERMINAL_SESSION_ID env var)
+   * @returns Current working directory info
+   */
+  async getSandboxCurrentDirectory(
+    namespace: string,
+    sandboxName: string,
+    sessionId: string
+  ): Promise<{ cwd: string; homeDir: string; isInHome: boolean }> {
+    const exec = new k8s.Exec(this.kc)
+    const podName = `${sandboxName}-0` // StatefulSet pod naming
+
+    // Combined script: Find PID from session file and get working directory
+    // We store the shell PID in a file because K8s exec creates a new shell
+    // that can't see the environment variables of the ttyd shell
+    const combinedScript = `
+#!/bin/bash
+# Find shell process by reading PID from session file
+
+# Step 1: Read shell PID from session file
+SESSION_FILE="/tmp/.terminal-session-${sessionId}"
+if [ ! -f "$SESSION_FILE" ]; then
+  echo "ERROR: Session file not found: $SESSION_FILE" >&2
+  echo "HINT: Make sure the terminal has fully loaded" >&2
+  exit 1
+fi
+
+SHELL_PID=$(cat "$SESSION_FILE" 2>/dev/null)
+if [ -z "$SHELL_PID" ]; then
+  echo "ERROR: Failed to read PID from session file: $SESSION_FILE" >&2
+  exit 1
+fi
+
+# Verify the process exists
+if [ ! -d "/proc/$SHELL_PID" ]; then
+  echo "ERROR: Process $SHELL_PID no longer exists" >&2
+  echo "HINT: The terminal session may have been closed" >&2
+  exit 1
+fi
+
+# Step 2: Get current working directory
+CWD=$(readlink -f /proc/$SHELL_PID/cwd 2>/dev/null)
+if [ $? -ne 0 ] || [ -z "$CWD" ]; then
+  echo "ERROR: Failed to read current directory for PID $SHELL_PID" >&2
+  exit 1
+fi
+
+# Get home directory
+HOME_DIR=$(eval echo ~$(stat -c '%U' /proc/$SHELL_PID 2>/dev/null))
+if [ -z "$HOME_DIR" ]; then
+  HOME_DIR="/home/agent"  # Fallback to default
+fi
+
+# Check if CWD is within HOME_DIR
+if [[ "$CWD" == "$HOME_DIR"* ]]; then
+  IS_IN_HOME="true"
+else
+  IS_IN_HOME="false"
+fi
+
+# Output JSON
+echo "{\\"cwd\\":\\"$CWD\\",\\"homeDir\\":\\"$HOME_DIR\\",\\"isInHome\\":$IS_IN_HOME}"
+`
+
+    let output = ''
+    let errorOutput = ''
+
+    try {
+      const stream = await import('stream')
+
+      await new Promise<void>((resolve, reject) => {
+        const stdoutStream = new stream.PassThrough()
+        const stderrStream = new stream.PassThrough()
+
+        stdoutStream.on('data', (chunk) => {
+          output += chunk.toString()
+        })
+
+        stderrStream.on('data', (chunk) => {
+          errorOutput += chunk.toString()
+        })
+
+        exec.exec(
+          namespace,
+          podName,
+          sandboxName, // Use sandboxName as container name (matches StatefulSet definition)
+          ['bash', '-c', combinedScript],
+          stdoutStream,
+          stderrStream,
+          null,
+          false,
+          (status) => {
+            if (status.status === 'Success') {
+              resolve()
+            } else {
+              reject(new Error(`Command failed: ${status.message || errorOutput}`))
+            }
+          }
+        )
+      })
+    } catch (error) {
+      throw new Error(`Failed to get current directory: ${error} - ${errorOutput}`)
+    }
+
+    // Parse JSON output
+    try {
+      const result = JSON.parse(output.trim())
+      return {
+        cwd: result.cwd,
+        homeDir: result.homeDir,
+        isInHome: result.isInHome,
+      }
+    } catch (parseError) {
+      throw new Error(
+        `Failed to parse directory info. Output: ${output}, Parse Error: ${parseError}, Stderr: ${errorOutput}`
+      )
     }
   }
 }
