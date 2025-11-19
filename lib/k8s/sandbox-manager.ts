@@ -706,7 +706,8 @@ export class SandboxManager {
               },
               {
                 name: 'filebrowser',
-                image: 'filebrowser/filebrowser:latest',
+                // docker pull filebrowser/filebrowser:v2-s6
+                image: 'filebrowser/filebrowser:v2-s6',
                 command: ['/bin/sh', '-c'],
                 args: [
                   `
@@ -765,7 +766,7 @@ exec filebrowser --database /database/filebrowser.db
                 },
                 volumeMounts: [
                   {
-                    name: 'vn-homevn-agent',
+                    name: 'vn-homevn-fulling',
                     mountPath: '/srv',
                   },
                   {
