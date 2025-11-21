@@ -107,7 +107,7 @@ export function TerminalDisplay({
         )}
 
         {/* Terminal Instance */}
-        <div className="flex-1 w-full">
+        <div className="flex-1 w-full p-2">
           <XtermTerminal
             key={`xterm-${tabId}`}
             wsUrl={ttydUrl}

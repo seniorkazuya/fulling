@@ -20,7 +20,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
+} from '@/components/ui/alert-dialog-vscode';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -70,7 +70,7 @@ export default function ProjectCardDropdown({ project }: ProjectCardDropdownProp
             <span className="sr-only">Open menu</span>
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
+        <DropdownMenuContent align="end" className="rounded-none">
           {availableActions.includes('START') && (
             <DropdownMenuItem
               onClick={(e) => {
@@ -133,9 +133,9 @@ export default function ProjectCardDropdown({ project }: ProjectCardDropdownProp
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Project</AlertDialogTitle>
+            <AlertDialogTitle>Are you sure you want to delete &quot;{project.name}&quot;?</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete &quot;{project.name}&quot;? This will terminate all resources
+              This will terminate all resources
               (databases, sandboxes) and cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
