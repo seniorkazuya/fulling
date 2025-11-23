@@ -18,7 +18,7 @@ Fulling automatically sets up the following for your project, ready in a minute:
 - Claude Code (pre-configured)
 - A live domain
 
-<img width="1511" height="775" alt="image" src="https://github.com/user-attachments/assets/4683a22c-800b-45b7-91a3-6ed5114ea3c9" />
+<img width="1024" height="523" alt="image" src="https://github.com/user-attachments/assets/44a03b7a-49a9-4348-b7e7-fe14fbeb7dbd" />
 
 <img width="1200" height="768" alt="image" src="https://github.com/user-attachments/assets/45aca3d0-f722-401c-9d63-9ca14957d338" />
 
@@ -58,32 +58,6 @@ Fulling is designed to streamline the entire full-stack development lifecycle us
 ## Star Fulling on GitHub can get the latest released information.
 
 ![star-demo](https://github.com/user-attachments/assets/bc497e0b-bd23-4ded-a231-1e382d56f92e)
-
-## 🏗️ Architecture
-
-### System Architecture
-
-```
-                                                                        ┌─────────────────┐                             
-                                                                        │ Ingress Domain  │                             
-                                                                        └─────────────────┘                             
-                                                                                │                                           
-┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐  
-│                 │     │                 │     │                 │     │  Sandbox Pods   │  
-│   Web Browser   │────▶│     Fulling     │────▶│   Kubernetes    │────▶│  (with Claude)  │  
-│                 │     │                 │     │     Cluster     │     └─────────────────┘
-└─────────────────┘     └─────────────────┘     └─────────────────┘             │                       
-                               │                         │                      │                      
-                               │                         ▼                      │                      
-                               │                 ┌─────────────────┐            │                      
-                               │                 │   PostgreSQL    │────────────┘
-                               │                 └─────────────────┘
-                               ▼                         
-                        ┌─────────────────┐     
-                        │     GitHub      │     
-                        │  Repositories   │     
-                        └─────────────────┘     
-```
 
 ## 🛠️ Technology Stack
 
