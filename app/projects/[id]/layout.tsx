@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 import { notFound } from 'next/navigation';
 
+import { ProjectContentWrapper } from '@/components/layout/project-content-wrapper';
 import { StatusBar } from '@/components/layout/status-bar';
 import PrimarySidebar from '@/components/sidebars/primary-sidebar';
 import ProjectSidebar from '@/components/sidebars/project-sidebar-new';
@@ -54,7 +55,9 @@ export default async function ProjectLayout({
 
         {/* Main Content Area */}
         <div className="flex-1 flex flex-col min-w-0 relative overflow-hidden">
-          {children}
+          <ProjectContentWrapper project={project} sandbox={project.sandboxes[0]}>
+            {children}
+          </ProjectContentWrapper>
         </div>
       </div>
       
