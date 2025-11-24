@@ -18,7 +18,7 @@ Fulling automatically sets up the following for your project, ready in a minute:
 - Claude Code (pre-configured)
 - A live domain
 
-<img width="1024" height="523" alt="image" src="https://github.com/user-attachments/assets/44a03b7a-49a9-4348-b7e7-fe14fbeb7dbd" />
+![fulling-frame](https://github.com/user-attachments/assets/5b535c93-8bf0-4014-8984-ef835d548dbc)
 
 <img width="1200" height="768" alt="image" src="https://github.com/user-attachments/assets/45aca3d0-f722-401c-9d63-9ca14957d338" />
 
