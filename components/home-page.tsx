@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 
 import { authenticateWithSealos } from '@/app/actions/sealos-auth';
+import { MatrixRain } from '@/components/MatrixRain';
 import { Button } from '@/components/ui/button';
 import { useSealos } from '@/provider/sealos';
 
@@ -82,25 +83,39 @@ export function HomePage() {
   return (
     <>
       {/* Base marketing page - always visible */}
-      <div className="min-h-screen bg-background text-foreground flex flex-col items-center justify-start pt-40">
-        <div className="max-w-4xl mx-auto px-4 text-center">
-          <div className="flex items-center justify-center gap-4 md:gap-6 mb-6 -ml-8">
-            <Image
-              src="/icon-transparent.svg"
-              alt="Fulling Logo"
-              width={80}
-              height={80}
-              className="w-16 h-16 md:w-20 md:h-20"
-            />
-            <h1 className="text-4xl md:text-6xl lg:text-8xl font-bold tracking-tight bg-gradient-to-r from-foreground to-muted-foreground bg-clip-text leading-normal text-transparent">
-              Fulling
-            </h1>
+      <div className="min-h-screen flex flex-col items-center justify-start pt-32">
+        {/* Matrix Background Effect */}
+        <MatrixRain />
+
+        <div className="max-w-4xl mx-auto px-4 py-12 text-center flex flex-col items-center space-y-8 bg-card backdrop-blur-sm rounded-xl border border-border/20 shadow-2xl">
+
+          {/* Hero Section: Logo and Title */}
+          <div className="flex flex-col items-center justify-center gap-4">
+            <div className="flex items-center justify-center gap-4 md:gap-6">
+              <Image
+                src="/icon-transparent.svg"
+                alt="Fulling Logo"
+                width={80}
+                height={80}
+                className="w-16 h-16 md:w-20 md:h-20"
+              />
+              <h1 className="md:text-6xl lg:text-8xl font-bold bg-gradient-to-r from-foreground to-muted-foreground bg-clip-text leading-normal text-transparent">
+                Fulling
+              </h1>
+            </div>
+
+            {/* Subtitle and Description */}
+            <p className="text-xl text-primary mb-12">AI-Powered Full-Stack Development Platform</p>
+            <p className="text-lg text-foreground/80 mb-8 max-w-2xl mx-auto">
+              Create, develop, and deploy production-ready web applications using natural language.
+              Powered by <span className="text-[#d97757] bg-[#d97757]/10 px-1 py-0.5 rounded-md font-mono">Claude Code</span> in isolated sandbox environments.
+            </p>
           </div>
-          <p className="text-xl text-muted-foreground mb-12">AI-Powered Full-Stack Development Platform</p>
-          <p className="text-lg text-muted-foreground mb-8 max-w-2xl mx-auto">
-            Create, develop, and deploy production-ready web applications using natural language.
-            Powered by Claude Code in isolated sandbox environments.
-          </p>
+
+
+
+          {/* Divider with VS Code styling */}
+          <div className="w-32 h-1 bg-secondary rounded-full"></div>
 
           {/* Error message - with aria attributes for accessibility */}
           {authError && (
@@ -118,16 +133,16 @@ export function HomePage() {
               size="lg"
               onClick={handleGetStarted}
               disabled={isButtonDisabled}
-              className="bg-primary hover:bg-primary-hover disabled:opacity-50 disabled:cursor-not-allowed rounded-md"
               aria-busy={isAuthenticating}
+              className="w-48"
             >
               {getButtonText()}
             </Button>
             <Button
               size="lg"
-              variant="outline"
-              className="hover:bg-accent rounded-md"
+              variant="secondary"
               title="Learn more about FullStack Agent (Coming Soon)"
+              className="w-48"
             >
               Learn More
             </Button>
