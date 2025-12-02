@@ -83,7 +83,7 @@ export function HomePage() {
   return (
     <>
       {/* Base marketing page - always visible */}
-      <div className="min-h-screen flex flex-col items-center justify-start pt-32">
+      <div className="min-h-screen flex flex-col items-center justify-start pt-28">
         {/* Matrix Background Effect */}
         <MatrixRain />
 
@@ -99,7 +99,7 @@ export function HomePage() {
                 height={80}
                 className="w-16 h-16 md:w-20 md:h-20"
               />
-              <h1 className="md:text-6xl lg:text-8xl font-bold bg-gradient-to-r from-foreground to-muted-foreground bg-clip-text leading-normal text-transparent">
+              <h1 className="md:text-6xl lg:text-8xl font-bold bg-linear-to-r from-foreground to-muted-foreground bg-clip-text leading-normal text-transparent">
                 Fulling
               </h1>
             </div>
@@ -108,7 +108,7 @@ export function HomePage() {
             <p className="text-xl text-primary mb-12">AI-Powered Full-Stack Development Platform</p>
             <p className="text-lg text-foreground/80 mb-8 max-w-2xl mx-auto">
               Create, develop, and deploy production-ready web applications using natural language.
-              Powered by <span className="text-[#d97757] bg-[#d97757]/10 px-1 py-0.5 rounded-md font-mono">Claude Code</span> in isolated sandbox environments.
+              Powered by <span className="text-brand-claude bg-brand-claude/10 px-1 py-0.5 rounded-md font-mono">Claude Code</span> in isolated sandbox environments.
             </p>
           </div>
 
