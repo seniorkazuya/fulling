@@ -2,6 +2,7 @@
 
 import { useCallback, useState } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 
@@ -138,14 +139,16 @@ export function HomePage() {
             >
               {getButtonText()}
             </Button>
-            <Button
-              size="lg"
-              variant="secondary"
-              title="Learn more about FullStack Agent (Coming Soon)"
-              className="w-48"
-            >
-              Learn More
-            </Button>
+            <Link href="https://fulling.ai/" target="_blank" rel="noopener">
+              <Button
+                size="lg"
+                variant="secondary"
+                title="Learn more about FullStack Agent"
+                className="w-48"
+              >
+                Learn More
+              </Button>
+            </Link>
           </div>
         </div>
       </div>
