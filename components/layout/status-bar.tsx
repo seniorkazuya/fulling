@@ -2,6 +2,9 @@ import React from 'react';
 import { Prisma } from '@prisma/client';
 import { Box, Database } from 'lucide-react';
 
+import { RepoStatusIndicator } from '@/components/layout/repo-status-indicator';
+import { getStatusIconColor } from '@/lib/util/status-colors';
+
 type ProjectWithRelations = Prisma.ProjectGetPayload<{
   include: {
     sandboxes: true;
@@ -11,20 +14,22 @@ type ProjectWithRelations = Prisma.ProjectGetPayload<{
 }>;
 
 interface StatusBarProps {
-  project?: ProjectWithRelations;
+  project: ProjectWithRelations;
 }
 
-import { getStatusIconColor } from '@/lib/util/status-colors';
-
 export function StatusBar({ project }: StatusBarProps) {
-  const database = project?.databases?.[0];
+  const database = project.databases?.[0];
   const dbStatus = database?.status || 'CREATING';
-  const sandbox = project?.sandboxes?.[0];
+  const sandbox = project.sandboxes?.[0];
   const sbStatus = sandbox?.status || 'CREATING';
 
   return (
     <div className="h-6 bg-primary text-card-foreground [&_span]:text-card-foreground flex items-center justify-between px-2 text-xs select-none z-50">
       <div className="flex items-center gap-4">
+        <RepoStatusIndicator 
+          project={project}
+        />
+
       </div>
 
       <div className="flex items-center gap-4">

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Code, Database, Save, Terminal } from 'lucide-react';
+import { Code, Database, Github, Save, Terminal } from 'lucide-react';
 import { toast } from 'sonner';
 
 import {
@@ -26,7 +26,7 @@ import { useSealos } from '@/provider/sealos';
 interface SettingsDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  defaultTab?: 'system-prompt' | 'kubeconfig' | 'anthropic';
+  defaultTab?: 'system-prompt' | 'kubeconfig' | 'anthropic' | 'github';
 }
 
 const DEFAULT_SYSTEM_PROMPT = `You are an AI full-stack developer working in a Next.js environment.
@@ -57,7 +57,13 @@ const DEFAULT_SYSTEM_PROMPT = `You are an AI full-stack developer working in a N
 - Optimize for performance and SEO
 - Follow modern React patterns and best practices`;
 
-type TabType = 'system-prompt' | 'kubeconfig' | 'anthropic';
+type TabType = 'system-prompt' | 'kubeconfig' | 'anthropic' | 'github';
+
+interface GitHubStatus {
+  connected: boolean;
+  login?: string;
+  avatar_url?: string;
+}
 
 export default function SettingsDialog({
   open,
@@ -86,6 +92,11 @@ export default function SettingsDialog({
   const [isAnthropicLoading, setIsAnthropicLoading] = useState(false);
   const [isAnthropicInitialLoading, setIsAnthropicInitialLoading] = useState(true);
 
+  // GitHub state
+  const [githubStatus, setGithubStatus] = useState<GitHubStatus>({ connected: false });
+  const [isGithubLoading, setIsGithubLoading] = useState(false);
+  const [isGithubInitialLoading, setIsGithubInitialLoading] = useState(true);
+
   // Confirmation dialog state
   const [showSystemPromptConfirm, setShowSystemPromptConfirm] = useState(false);
   const [showSystemPromptResetConfirm, setShowSystemPromptResetConfirm] = useState(false);
@@ -99,6 +110,7 @@ export default function SettingsDialog({
         loadKubeconfig();
       }
       loadAnthropicConfig();
+      loadGithubStatus();
     }
   }, [open, isSealos]);
 
@@ -157,6 +169,18 @@ export default function SettingsDialog({
       console.error('Failed to load Anthropic config:', error);
     } finally {
       setIsAnthropicInitialLoading(false);
+    }
+  };
+
+  const loadGithubStatus = async () => {
+    try {
+      const data = await fetchClient.GET<GitHubStatus>('/api/user/github');
+      setGithubStatus(data);
+    } catch (error) {
+      console.error('Failed to load GitHub status:', error);
+      setGithubStatus({ connected: false });
+    } finally {
+      setIsGithubInitialLoading(false);
     }
   };
 
@@ -253,6 +277,66 @@ export default function SettingsDialog({
     toast.success('Reset to default system prompt');
   };
 
+  const handleConnectGithub = () => {
+    setIsGithubLoading(true);
+
+    // Open popup window for GitHub OAuth
+    const width = 600;
+    const height = 700;
+    const left = window.screen.width / 2 - width / 2;
+    const top = window.screen.height / 2 - height / 2;
+
+    const popup = window.open(
+      '/api/user/github/bind',
+      'github-oauth',
+      `width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=yes`
+    );
+
+    if (!popup) {
+      toast.error('Failed to open popup window. Please allow popups for this site.');
+      setIsGithubLoading(false);
+      return;
+    }
+
+    // Listen for message from popup
+    const handleMessage = (event: MessageEvent) => {
+      if (event.origin !== window.location.origin) return;
+      if (event.data.type !== 'github-oauth-callback') return;
+
+      if (event.data.success) {
+        toast.success('GitHub account connected successfully!');
+        loadGithubStatus();
+      } else {
+        toast.error(event.data.message || 'Failed to connect GitHub account');
+      }
+
+      setIsGithubLoading(false);
+      window.removeEventListener('message', handleMessage);
+    };
+
+    window.addEventListener('message', handleMessage);
+
+    // Fallback: stop loading after timeout
+    setTimeout(() => {
+      setIsGithubLoading(false);
+      window.removeEventListener('message', handleMessage);
+    }, 60000); // 1 minute timeout
+  };
+
+  const handleDisconnectGithub = async () => {
+    setIsGithubLoading(true);
+    try {
+      await fetchClient.DELETE('/api/user/github');
+      toast.success('GitHub account disconnected successfully');
+      setGithubStatus({ connected: false });
+    } catch (error: unknown) {
+      console.error('Failed to disconnect GitHub:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to disconnect GitHub account');
+    } finally {
+      setIsGithubLoading(false);
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
@@ -270,7 +354,7 @@ export default function SettingsDialog({
             className="h-full flex flex-col"
           >
             <TabsList
-              className={`shrink-0 grid w-full ${isSealos ? 'grid-cols-2' : 'grid-cols-3'} bg-secondary border-border rounded-lg`}
+              className={`shrink-0 grid w-full ${isSealos ? 'grid-cols-3' : 'grid-cols-4'} bg-secondary border-border rounded-lg`}
             >
               <TabsTrigger
                 value="system-prompt"
@@ -294,6 +378,13 @@ export default function SettingsDialog({
               >
                 <Terminal className="mr-2 h-4 w-4" />
                 Anthropic
+              </TabsTrigger>
+              <TabsTrigger
+                value="github"
+                className="data-[state=active]:bg-primary data-[state=active]:text-foreground text-muted-foreground hover:text-foreground"
+              >
+                <Github className="mr-2 h-4 w-4" />
+                GitHub
               </TabsTrigger>
             </TabsList>
 
@@ -501,6 +592,75 @@ export default function SettingsDialog({
                       {isAnthropicLoading ? 'Saving...' : 'Save Configuration'}
                     </Button>
                   </div>
+                </div>
+              </TabsContent>
+
+              {/* GitHub Tab */}
+              <TabsContent value="github" className="mt-0">
+                <div className="space-y-4 pb-4">
+                  <div className="space-y-2">
+                    <Label className="text-foreground text-sm font-medium">GitHub Account</Label>
+                    <p className="text-xs text-muted-foreground">
+                      Connect your GitHub account to enable repository access and code management features.
+                    </p>
+                  </div>
+
+                  {isGithubInitialLoading ? (
+                    <div className="flex items-center justify-center py-8">
+                      <div className="text-muted-foreground">Loading...</div>
+                    </div>
+                  ) : githubStatus.connected ? (
+                    // Connected state
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-4 p-4 bg-green-500/10 border border-green-500/20 rounded-lg">
+                        {githubStatus.avatar_url && (
+                          <img
+                            src={githubStatus.avatar_url}
+                            alt="GitHub Avatar"
+                            className="w-12 h-12 rounded-full"
+                          />
+                        )}
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium text-foreground">
+                              {githubStatus.login}
+                            </span>
+                            <span className="text-xs text-green-600 dark:text-green-500">● Connected</span>
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Your GitHub account is connected and ready to use.
+                          </p>
+                        </div>
+                      </div>
+
+                      <Button
+                        variant="outline"
+                        onClick={handleDisconnectGithub}
+                        disabled={isGithubLoading}
+                        className="border-border text-muted-foreground hover:text-foreground hover:bg-accent"
+                      >
+                        {isGithubLoading ? 'Disconnecting...' : 'Disconnect GitHub Account'}
+                      </Button>
+                    </div>
+                  ) : (
+                    // Not connected state
+                    <div className="space-y-4">
+                      <div className="p-4 bg-muted/50 border border-border rounded-lg">
+                        <p className="text-sm text-muted-foreground">
+                          No GitHub account connected. Connect your GitHub account to access repositories and enable version control features.
+                        </p>
+                      </div>
+
+                      <Button
+                        onClick={handleConnectGithub}
+                        disabled={isGithubLoading}
+                        className="bg-primary hover:bg-primary/90 text-primary-foreground"
+                      >
+                        <Github className="mr-2 h-4 w-4" />
+                        {isGithubLoading ? 'Connecting...' : 'Connect GitHub Account'}
+                      </Button>
+                    </div>
+                  )}
                 </div>
               </TabsContent>
             </div>

@@ -525,12 +525,14 @@ export async function executeTtydCommand(options: TtydExecOptions): Promise<Ttyd
 export async function execCommand(
   ttydUrl: string,
   accessToken: string,
-  command: string
+  command: string,
+  timeoutMs?: number
 ): Promise<string> {
   const result = await executeTtydCommand({
     ttydUrl,
     accessToken,
     command,
+    timeoutMs,
   })
 
   if (result.timedOut) {
