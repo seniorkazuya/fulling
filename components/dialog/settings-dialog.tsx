@@ -390,7 +390,7 @@ export default function SettingsDialog({
 
             <div className="flex-1 mt-4 min-h-0">
               {/* System Prompt Tab */}
-              <TabsContent value="system-prompt" className="mt-0 h-full flex flex-col">
+              <TabsContent value="system-prompt" className="mt-0 h-full flex flex-col overflow-y-auto">
                 <div className="space-y-4 pb-4 flex-1 flex flex-col min-h-0">
                   <div className="space-y-2 shrink-0">
                     <Label
@@ -487,7 +487,7 @@ export default function SettingsDialog({
               )}
 
               {/* Anthropic Tab */}
-              <TabsContent value="anthropic" className="mt-0">
+              <TabsContent value="anthropic" className="mt-0 h-full overflow-y-auto">
                 <div className="space-y-4 pb-4">
                   <div className="space-y-2">
                     <Label
@@ -596,7 +596,7 @@ export default function SettingsDialog({
               </TabsContent>
 
               {/* GitHub Tab */}
-              <TabsContent value="github" className="mt-0">
+              <TabsContent value="github" className="mt-0 h-full overflow-y-auto">
                 <div className="space-y-4 pb-4">
                   <div className="space-y-2">
                     <Label className="text-foreground text-sm font-medium">GitHub Account</Label>

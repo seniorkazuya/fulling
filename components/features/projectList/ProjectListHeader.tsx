@@ -7,7 +7,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Plus, User } from 'lucide-react';
+import { Plus, Settings } from 'lucide-react';
 
 import CreateProjectDialog from '@/components/dialog/create-project-dialog';
 import SettingsDialog from '@/components/dialog/settings-dialog';
@@ -41,7 +41,7 @@ const ProjectListHeader = () => {
              className="ml-1 rounded-full border-border text-muted-foreground hover:text-foreground hover:border-primary shadow-sm"
              aria-label="User Settings"
            >
-             <User size={18} />
+             <Settings size={18} />
            </Button>
         </div>
       </div>
