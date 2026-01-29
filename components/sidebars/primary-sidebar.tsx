@@ -1,112 +1,82 @@
 'use client';
 
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { Circle, FolderOpen, GitBranch, LayoutGrid, Plus, Settings } from 'lucide-react';
+import { MdOutlineGridView, MdOutlineSettings } from 'react-icons/md';
+import Image from 'next/image';
 import Link from 'next/link';
 
-import CreateProjectDialog from '@/components/dialog/create-project-dialog';
 import SettingsDialog from '@/components/dialog/settings-dialog';
-import { getStatusTextClasses } from '@/lib/util/status-colors';
-import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
 
-interface Project {
-  id: string;
-  name: string;
-  status: string;
-  updatedAt: string;
+/**
+ * PrimarySidebar Component
+ *
+ * This is the persistent left-most command center of the application with a fixed width.
+ * It remains visible across page transitions, providing global access to core functionalities.
+ *
+ * Structure:
+ * 1. Top Section: Contains 'Home' and 'Projects' navigation buttons.
+ * 2. Bottom Section: Contains 'Settings' button which triggers the settings dialog.
+ *
+ * Note: Marked with 'use client' as it manages local state (useState) for the settings dialog.
+ */
+export default function PrimarySidebar() {
+  return (
+    <aside className="w-14 flex flex-col items-center py-4 bg-black border-r border-border flex-shrink-0 z-20">
+      {/* Top buttons */}
+      <div className="space-y-2 flex flex-col items-center">
+        <HomeButton />
+        <ProjectsButton />
+      </div>
+
+      {/* Bottom buttons */}
+      <div className="mt-auto flex flex-col items-center gap-2">
+        <SettingsButton />
+      </div>
+    </aside>
+  );
 }
 
-interface PrimarySidebarProps {
-  currentProjectId: string;
-  userId: string;
+function HomeButton() {
+  return (
+    <Button variant="ghost" size="icon" asChild className="group hover:bg-transparent">
+      <Link href="/">
+        <Image
+          src="/icon-transparent.svg"
+          alt="Fulling"
+          width={24}
+          height={24}
+          className="rounded-full opacity-80 group-hover:opacity-100 transition-all duration-300 shadow-[0_0_12px_color-mix(in_srgb,var(--primary),transparent_40%)] group-hover:shadow-[0_0_16px_color-mix(in_srgb,var(--primary),transparent_10%)]"
+        />
+      </Link>
+    </Button>
+  );
 }
 
-export default function PrimarySidebar({ currentProjectId }: PrimarySidebarProps) {
-  // Fetch projects list with TanStack Query, polling every 5 seconds
-  const { data: projects } = useQuery<Project[]>({
-    queryKey: ['projects'],
-    queryFn: async () => {
-      const response = await fetch('/api/projects');
-      if (!response.ok) {
-        throw new Error('Failed to fetch projects');
-      }
-      return response.json();
-    },
-    refetchInterval: 5000, // Poll every 5 seconds
-    staleTime: 4000, // Data is fresh for 4 seconds
-    retry: 2,
-  });
+function ProjectsButton() {
+  return (
+    <Button variant="ghost" size="icon" asChild className="group hover:bg-transparent">
+      <Link href="/projects">
+        <MdOutlineGridView className="w-5 h-5 text-gray-400 group-hover:text-primary transition-colors" />
+      </Link>
+    </Button>
+  );
+}
+
+function SettingsButton() {
   const [showSettings, setShowSettings] = useState(false);
-  const [showCreateProject, setShowCreateProject] = useState(false);
 
   return (
-    <div
-      className="bg-sidebar-background border-r border-sidebar-border flex flex-col w-12 transition-all duration-200"
-    >
-      {/* Header */}
-      <div className="h-12 flex items-center justify-center border-b border-border">
-        <FolderOpen className="h-5 w-5 text-muted-foreground" />
-      </div>
-
-      {/* Navigation Items */}
-      <div className="flex-1 py-2 overflow-y-auto">
-        {/* Home Link */}
-        <Link
-          href="/projects"
-          className="group flex items-center justify-center h-8 px-3 hover:bg-sidebar-accent/10 transition-colors"
-        >
-          <LayoutGrid className="h-4 w-4 text-muted-foreground group-hover:text-sidebar-foreground shrink-0 transition-colors" />
-        </Link>
-
-        {/* New Project */}
-        <button
-          onClick={() => setShowCreateProject(true)}
-          className="group flex items-center justify-center h-8 px-3 hover:bg-sidebar-accent transition-colors mb-2 w-full"
-        >
-          <Plus className="h-4 w-4 text-muted-foreground group-hover:text-sidebar-foreground shrink-0 transition-colors" />
-        </button>
-
-        <div className="border-t border-border my-2" />
-
-        {/* Project List */}
-        <div className="space-y-1">
-          {projects?.map((project) => (
-            <Link
-              key={project.id}
-              href={`/projects/${project.id}`}
-              className={cn(
-                'group flex items-center justify-center h-8 px-3 hover:bg-sidebar-accent transition-colors',
-                currentProjectId === project.id && 'bg-sidebar-accent'
-              )}
-            >
-              <div className="flex items-center justify-center shrink-0">
-                <Circle
-                  className={cn('h-2 w-2 mr-2', getStatusTextClasses(project.status))}
-                  fill="currentColor"
-                />
-                <GitBranch className="h-4 w-4 text-muted-foreground group-hover:text-sidebar-foreground transition-colors" />
-              </div>
-            </Link>
-          ))}
-        </div>
-      </div>
-
-      {/* Settings */}
-      <div className="p-2">
-        <button
-          onClick={() => setShowSettings(true)}
-          className="group flex items-center justify-center h-8 px-2 hover:bg-sidebar-accent rounded transition-colors w-full"
-        >
-          <Settings className="h-4 w-4 text-muted-foreground group-hover:text-sidebar-foreground shrink-0 transition-colors" />
-        </button>
-      </div>
-
-      {/* Create Project Dialog */}
-      <CreateProjectDialog open={showCreateProject} onOpenChange={setShowCreateProject} />
-
-      {/* Settings Dialog */}
+    <>
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={() => setShowSettings(true)}
+        className="group hover:bg-transparent"
+      >
+        <MdOutlineSettings className="w-5 h-5 text-gray-400 group-hover:text-primary transition-colors" />
+      </Button>
       <SettingsDialog open={showSettings} onOpenChange={setShowSettings} />
-    </div>
+    </>
   );
 }

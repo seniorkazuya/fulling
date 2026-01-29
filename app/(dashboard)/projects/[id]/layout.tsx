@@ -2,9 +2,8 @@ import { redirect } from 'next/navigation';
 import { notFound } from 'next/navigation';
 
 import { ProjectContentWrapper } from '@/components/layout/project-content-wrapper';
-import { StatusBar } from '@/components/layout/status-bar';
 import PrimarySidebar from '@/components/sidebars/primary-sidebar';
-import ProjectSidebar from '@/components/sidebars/project-sidebar-new';
+import ProjectSidebar from '@/components/sidebars/project-sidebar';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 
@@ -44,7 +43,7 @@ export default async function ProjectLayout({
     <div className="h-screen flex flex-col text-foreground overflow-hidden">
       <div className="flex-1 flex overflow-hidden">
         {/* Primary Sidebar - VSCode style */}
-        <PrimarySidebar currentProjectId={id} userId={session.user.id} />
+        <PrimarySidebar />
 
         {/* Secondary Sidebar - Project Settings */}
         <ProjectSidebar
@@ -58,8 +57,6 @@ export default async function ProjectLayout({
           </ProjectContentWrapper>
         </div>
       </div>
-      
-      <StatusBar projectId={id} />
     </div>
   );
 }
