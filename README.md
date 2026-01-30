@@ -21,7 +21,7 @@ Fulling automatically sets up the following for your project, ready in a minute:
 
 ![fulling-frame](https://github.com/user-attachments/assets/5b535c93-8bf0-4014-8984-ef835d548dbc)
 
-<img width="3022" height="1532" alt="project_details" src="https://github.com/user-attachments/assets/b100a833-fa3d-459e-83d9-3b590beb79a3" />
+![fulling-desktop](https://github.com/user-attachments/assets/91b40df8-79de-4922-8627-822b98768915)
 
 
 ### Features
