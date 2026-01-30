@@ -33,8 +33,8 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { MdArrowDownward } from 'react-icons/md';
 import type { ITerminalOptions, Terminal as ITerminal } from '@xterm/xterm';
-import { ArrowDown } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { useFileDrop } from './hooks/use-file-drop';
@@ -769,7 +769,7 @@ export function XtermTerminal({
                      animate-fade-in"
           aria-label={`Scroll to bottom (${newLineCount} new lines)`}
         >
-          <ArrowDown className="w-3.5 h-3.5 text-[#3794ff]" />
+          <MdArrowDownward className="w-3.5 h-3.5 text-[#3794ff]" />
           <span className="font-mono text-[#3794ff] font-medium">{newLineCount}</span>
           <span>new {newLineCount === 1 ? 'line' : 'lines'}</span>
         </button>
