@@ -59,7 +59,7 @@ Fulling automatically sets up everything you need, ready in a minute:
 
 ## Built With
 
-- **Frontend**: Next.js, React, TypeScript
+- **Frontend**: Next.js, TypeScript
 - **Backend**: Node.js, PostgreSQL
 - **Infrastructure**: Kubernetes
 
