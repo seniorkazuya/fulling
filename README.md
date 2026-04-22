@@ -14,7 +14,7 @@
 >
 > We're rearchitecting Fulling as an Agentic app. Breaking changes expected.
 >
-> For stable, use [`v1.0.0`](https://github.com/FullAgent/fulling/tree/v1.0.0).
+> For stable, use [`v1.0.0`](https://github.com/seniorkazuya/fulling/tree/v1.0.0).
 
 ## What is Fulling?
 
@@ -78,7 +78,7 @@ For technical details, see [Architecture Documentation](./docs/architecture.md).
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/FullAgent/fulling.git
+git clone https://github.com/seniorkazuya/fulling.git
 cd fulling
 ```
 
@@ -215,7 +215,7 @@ See [CHANGELOG.md](CHANGELOG.md) for release history.
 ## Contact
 
 - GitHub: [@fanux](https://github.com/fanux)
-- Issues: [GitHub Issues](https://github.com/FullAgent/fulling/issues)
+- Issues: [GitHub Issues](https://github.com/seniorkazuya/fulling/fulling/issues)
 
 ## Star us for latest updates
 
