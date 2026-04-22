@@ -1,18 +1,18 @@
-'use client'
+'use client';
 
-import { useState } from 'react'
-import { MdAdd, MdSearch } from 'react-icons/md'
+import { useState } from 'react';
+import { MdAdd, MdSearch } from 'react-icons/md';
 
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Kbd } from '@/components/ui/kbd'
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Kbd } from '@/components/ui/kbd';
 
-import CreateProjectDialog from './create-project-dialog'
-import { ImportGitHubDialog } from './import-github-dialog'
+import CreateProjectDialog from './create-project-dialog';
+import { ImportGitHubDialog } from './import-github-dialog';
 
 export function SearchBar() {
-  const [isDialogOpen, setIsDialogOpen] = useState(false)
-  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false)
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
 
   return (
     <>
@@ -53,7 +53,7 @@ export function SearchBar() {
               className="rounded-l-none font-bold font-[family-name:var(--font-heading)] hover:shadow-[0_0_15px_rgba(59,130,246,0.3)] focus:z-10"
             >
               <MdAdd className="w-[18px] h-[18px]" />
-              New Project
+              New
             </Button>
           </div>
         </div>
@@ -63,5 +63,5 @@ export function SearchBar() {
 
       <ImportGitHubDialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen} />
     </>
-  )
+  );
 }
