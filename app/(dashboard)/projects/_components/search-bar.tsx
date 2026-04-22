@@ -53,7 +53,7 @@ export function SearchBar() {
               className="rounded-l-none font-bold font-[family-name:var(--font-heading)] hover:shadow-[0_0_15px_rgba(59,130,246,0.3)] focus:z-10"
             >
               <MdAdd className="w-[18px] h-[18px]" />
-              New
+              New Project
             </Button>
           </div>
         </div>
